@@ -66,17 +66,23 @@ CREATE TABLE members (
 A "member" row is scoped to one house, since the same Discord user could in
 principle be a member of multiple houses (servers) the bot serves.
 
-`database.py` exposes plain functions other modules use (no ORM):
-- `init_db()` — creates the connection and ensures core tables exist.
-- `get_connection()` — returns the shared sqlite connection for cogs to use for
-  their own feature tables.
-- `get_house_by_guild(guild_id)` / `create_house(guild_id, name)`
-- `get_member(house_id, discord_user_id)` / `add_member(house_id, discord_user_id, display_name)`
-- `list_members(house_id)`
+`database.py` exposes plain functions other modules use (no ORM). Every function
+takes the sqlite connection as an explicit first argument rather than relying on
+module-level state — this keeps the functions trivially testable against an
+in-memory database:
+- `connect(path)` — opens and returns a sqlite connection (row factory set to
+  `sqlite3.Row`).
+- `init_db(conn)` — ensures the core tables exist on the given connection.
+- `get_house(conn, guild_id)` / `create_house(conn, guild_id, name)`
+- `get_member(conn, house_id, discord_user_id)` / `add_member(conn, house_id, discord_user_id, display_name)`
+- `list_members(conn, house_id)`
 
-Each feature cog creates and owns its own tables (foreign-keyed to `houses` /
-`members`) using the shared connection — `expenses.py` does this for its tables,
-and future cogs (chores, groceries, etc.) will follow the same pattern.
+The bot opens a single connection at startup (`bot.py`) and stores it on the bot
+instance as `bot.db`; cogs access it via `self.bot.db`, which serves as the
+"shared connection" every feature reads and writes through. Each feature cog
+creates and owns its own tables (foreign-keyed to `houses` / `members`) using that
+shared connection — `expenses.py` does this for its tables, and future cogs
+(chores, groceries, etc.) will follow the same pattern.
 
 ## Core commands (`cogs/core.py`)
 
