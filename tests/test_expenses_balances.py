@@ -35,3 +35,14 @@ def test_compute_net_balances_multiple_expenses_net_correctly():
 
 def test_compute_net_balances_no_debts_or_payments_is_empty():
     assert expenses.compute_net_balances([], []) == {}
+
+
+def test_compute_net_balances_payment_only_pair():
+    net = expenses.compute_net_balances([], [(1, 2, 500)])
+    assert net == {(2, 1): 500}
+
+
+def test_compute_net_balances_multiple_pairs_dont_interfere():
+    debts = [(1, 2, 100), (2, 3, 50)]
+    net = expenses.compute_net_balances(debts, [])
+    assert net == {(1, 2): 100, (2, 3): 50}
