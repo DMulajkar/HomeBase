@@ -1,6 +1,7 @@
 import sqlite3
 from collections import defaultdict
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Optional
 
 import discord
@@ -8,6 +9,10 @@ from discord import app_commands
 from discord.ext import commands
 
 import database
+
+
+def dollars_to_cents(amount: float) -> int:
+    return int((Decimal(str(amount)) * 100).to_integral_value())
 
 
 def split_amount(amount_cents: int, member_ids: list[int]) -> dict[int, int]:
@@ -219,7 +224,7 @@ class Expenses(commands.Cog):
             payer_member = payer_row
             payer_display = paid_by.display_name
 
-        amount_cents = round(amount * 100)
+        amount_cents = dollars_to_cents(amount)
         members = database.list_members(self.bot.db, house["house_id"])
         member_ids = [m["member_id"] for m in members]
         record_expense(
@@ -241,13 +246,16 @@ class Expenses(commands.Cog):
         if amount <= 0:
             await interaction.response.send_message("Amount must be positive.", ephemeral=True)
             return
+        if to.id == interaction.user.id:
+            await interaction.response.send_message("You can't settle up with yourself.", ephemeral=True)
+            return
 
         to_row = database.get_member(self.bot.db, house["house_id"], str(to.id))
         if to_row is None:
             await interaction.response.send_message(f"{to.display_name} isn't a member of this house.", ephemeral=True)
             return
 
-        amount_cents = round(amount * 100)
+        amount_cents = dollars_to_cents(amount)
         record_settlement(self.bot.db, house["house_id"], member["member_id"], to_row["member_id"], amount_cents)
         await interaction.response.send_message(f"Recorded: you paid {to.display_name} ${amount:.2f}.")
 

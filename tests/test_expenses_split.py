@@ -21,3 +21,17 @@ def test_split_amount_remainder_distributed_in_order():
     shares = expenses.split_amount(101, [10, 20, 30])
     assert shares == {10: 34, 20: 34, 30: 33}
     assert sum(shares.values()) == 101
+
+
+def test_dollars_to_cents_exact():
+    assert expenses.dollars_to_cents(42.50) == 4250
+
+
+def test_dollars_to_cents_avoids_float_rounding_error():
+    # 2.675 * 100 == 267.49999999999997 in binary float; round() on that
+    # truncates to 267 instead of 268. Decimal-based conversion must not.
+    assert expenses.dollars_to_cents(2.675) == 268
+
+
+def test_dollars_to_cents_whole_dollar():
+    assert expenses.dollars_to_cents(10.0) == 1000
