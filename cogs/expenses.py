@@ -86,13 +86,13 @@ def record_expense(
     paid_by_member_id: int,
     member_ids: list[int],
 ) -> int:
+    shares = split_amount(amount_cents, member_ids)
     cur = conn.execute(
         "INSERT INTO expenses (house_id, description, amount_cents, paid_by_member_id, created_at) "
         "VALUES (?, ?, ?, ?, ?)",
         (house_id, description, amount_cents, paid_by_member_id, datetime.now(timezone.utc).isoformat()),
     )
     expense_id = cur.lastrowid
-    shares = split_amount(amount_cents, member_ids)
     conn.executemany(
         "INSERT INTO expense_splits (expense_id, member_id, share_cents) VALUES (?, ?, ?)",
         [(expense_id, member_id, share) for member_id, share in shares.items()],
