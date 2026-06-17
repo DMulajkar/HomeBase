@@ -52,6 +52,35 @@ class Core(commands.Cog):
         )
         await interaction.response.send_message(f"{interaction.user.display_name} joined the house!")
 
+    @app_commands.command(name="house-members", description="See who's in this house")
+    async def house_members(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            await interaction.response.send_message("This command must be used in a server.", ephemeral=True)
+            return
+
+        house = database.get_house(self.bot.db, str(interaction.guild_id))
+        if house is None:
+            await interaction.response.send_message(
+                "This server doesn't have a house set up yet. Run /house-setup first.", ephemeral=True
+            )
+            return
+
+        members = database.list_members(self.bot.db, house["house_id"])
+        if not members:
+            await interaction.response.send_message(
+                "No one has joined this house yet. Run /join-house to be the first.", ephemeral=True
+            )
+            return
+
+        # Listed in join order, which is also the chore rotation order.
+        lines = "\n".join(f"{i}. {m['display_name']}" for i, m in enumerate(members, start=1))
+        embed = discord.Embed(
+            title=f"🏠 {house['name']} — {len(members)} member{'s' if len(members) != 1 else ''}",
+            description=lines,
+        )
+        embed.set_footer(text="Listed in join order (also the chore rotation order).")
+        await interaction.response.send_message(embed=embed)
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Core(bot))
