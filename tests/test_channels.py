@@ -1,6 +1,15 @@
 from cogs import channels
 
-EXPECTED_NAMES = {"chores", "groceries", "food", "events", "memories", "bot-commands", "welcome"}
+EXPECTED_NAMES = {
+    "chores",
+    "rent-and-utilities",
+    "groceries",
+    "food",
+    "events",
+    "memories",
+    "bot-commands",
+    "welcome",
+}
 
 
 def test_catalog_has_expected_channels():

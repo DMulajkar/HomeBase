@@ -22,6 +22,11 @@ class ChannelSpec:
 
 CHANNEL_CATALOG = [
     ChannelSpec("chores", "Chore assignments, rotations, and reminders.", "Track and assign household chores"),
+    ChannelSpec(
+        "rent-and-utilities",
+        "Rent, utilities, bills, balances, and who owes whom.",
+        "Bills, rent & shared balances",
+    ),
     ChannelSpec("groceries", "Shared grocery lists and who's shopping.", "Shared shopping lists & runs"),
     ChannelSpec("food", "Meals, recipes, leftovers, and dinner plans.", "Meals, recipes & dinner plans"),
     ChannelSpec("events", "House events, hangouts, and shared calendar.", "Plan house events & hangouts"),

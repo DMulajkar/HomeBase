@@ -64,7 +64,7 @@ The scheduler exists (`scheduler.py` pure/DB + `cogs/scheduler.py` loop). To add
 Purpose: the bot always knows who owes money, who is owed, current balances, and upcoming bills. Extends the existing expenses cog (likely a new `cogs/finance.py` that reuses the splitting/balance helpers, or an expansion of `expenses.py`).
 
 - [x] Expense tracking, balance tracking, payment tracking, settlement calculations (already in expenses cog)
-- [ ] Add `rent-and-utilities` to the channel catalog
+- [x] Add `rent-and-utilities` to the channel catalog
 - [ ] Recurring **bills**: rent, utilities, internet, shared subscriptions (amount, due date, split rule)
 - [ ] `/add-bill`, `/rent`, `/utilities` commands; reuse `/pay` and `/balances`
 - [ ] Due-date reminders (auto-post)
