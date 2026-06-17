@@ -8,6 +8,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import database
+from cogs import channels
 
 
 def dollars_to_cents(amount: float) -> int:
@@ -49,6 +50,42 @@ def compute_net_balances(
         elif amount < 0:
             result[(b, a)] = -amount
     return result
+
+
+def format_net_balances(net: dict[tuple[int, int], int], names: dict[int, object]) -> list[str]:
+    """Render the net-balance map as '<ower> owes <owee> $X.XX' lines."""
+    return [
+        f"{names.get(ower_id, ower_id)} owes {names.get(owee_id, owee_id)} ${cents / 100:.2f}"
+        for (ower_id, owee_id), cents in net.items()
+    ]
+
+
+def net_between(net: dict[tuple[int, int], int], a: int, b: int) -> int:
+    """Cents `a` owes `b` from a net-balance map.
+
+    Positive if `a` owes `b`, negative if `b` owes `a`, 0 if settled between them.
+    """
+    if (a, b) in net:
+        return net[(a, b)]
+    if (b, a) in net:
+        return -net[(b, a)]
+    return 0
+
+
+def format_payment_confirmation(
+    from_name: object, to_name: object, amount_cents: int, net_after_cents: int
+) -> str:
+    """Public confirmation posted after a payment.
+
+    `net_after_cents` is what `from_name` still owes `to_name` afterward; a
+    negative value means the payment overshot and `to_name` now owes `from_name`.
+    """
+    paid = f"💸 **{from_name}** paid **{to_name}** ${amount_cents / 100:.2f}."
+    if net_after_cents > 0:
+        return f"{paid} {from_name} still owes {to_name} ${net_after_cents / 100:.2f}."
+    if net_after_cents < 0:
+        return f"{paid} {to_name} now owes {from_name} ${-net_after_cents / 100:.2f}."
+    return f"{paid} They're all settled up! 🎉"
 
 
 def init_tables(conn: sqlite3.Connection) -> None:
@@ -218,7 +255,29 @@ class Expenses(commands.Cog):
 
         amount_cents = dollars_to_cents(amount)
         record_settlement(self.bot.db, house["house_id"], member["member_id"], to_row["member_id"], amount_cents)
-        await interaction.response.send_message(f"Recorded: you paid {to.display_name} ${amount:.2f}.")
+
+        net = compute_net_balances(
+            get_debts(self.bot.db, house["house_id"]), get_payments(self.bot.db, house["house_id"])
+        )
+        net_after = net_between(net, member["member_id"], to_row["member_id"])
+        confirmation = format_payment_confirmation(
+            interaction.user.display_name, to.display_name, amount_cents, net_after
+        )
+
+        # Announce to the house's finance channel. If it exists and isn't where
+        # the command was run, ack privately and post there; otherwise the public
+        # interaction response is the confirmation (no duplicate message).
+        channel = channels.resolve_house_channel(interaction.guild, "rent-and-utilities")
+        if channel is not None and channel.id != interaction.channel_id:
+            await interaction.response.send_message(
+                f"Recorded — posted the confirmation in {channel.mention}.", ephemeral=True
+            )
+            try:
+                await channel.send(confirmation)
+            except discord.Forbidden:
+                pass
+        else:
+            await interaction.response.send_message(confirmation)
 
     @app_commands.command(name="balances", description="Show who owes whom in this house")
     async def balances(self, interaction: discord.Interaction):
@@ -239,10 +298,7 @@ class Expenses(commands.Cog):
             return
 
         members = {m["member_id"]: m["display_name"] for m in database.list_members(self.bot.db, house["house_id"])}
-        lines = [
-            f"{members.get(ower_id, ower_id)} owes {members.get(owee_id, owee_id)} ${cents / 100:.2f}"
-            for (ower_id, owee_id), cents in net.items()
-        ]
+        lines = format_net_balances(net, members)
         await interaction.response.send_message("\n".join(lines))
 
 

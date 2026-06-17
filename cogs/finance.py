@@ -11,6 +11,8 @@ import database
 from cogs import expenses
 
 KINDS = ("fixed", "variable")
+REMINDER_LEAD_DAYS = 3  # days before a bill's due date to start reminding
+SUMMARY_DAY = 1  # day of the month to post the financial summary
 
 
 # --- Layer 1: pure functions (unit-tested) ---
@@ -44,6 +46,22 @@ def fixed_bill_period_to_post(today: date, due_day: int, start_date: date) -> Op
     if due < start_date:
         return None
     return period_key(today)
+
+
+def days_until_due(today: date, due_day: int) -> Optional[int]:
+    """Whole days from today until this month's (clamped) due date.
+
+    Returns 0 on the due day and None once this month's due date has passed.
+    """
+    due = due_date_for_month(today.year, today.month, due_day)
+    if due < today:
+        return None
+    return (due - today).days
+
+
+def is_summary_day(today: date, summary_day: int) -> bool:
+    """Whether today is the day of the month to post the financial summary."""
+    return today.day == summary_day
 
 
 # --- Layer 2: DB functions (each takes sqlite3.Connection first) ---
@@ -215,6 +233,61 @@ def render_due_fixed_bills(conn: sqlite3.Connection, house_id: int, today: date)
     if not lines:
         return None
     return "💸 **Bills due today**\n" + "\n".join(lines)
+
+
+def render_upcoming_bills(conn: sqlite3.Connection, house_id: int, today: date) -> Optional[str]:
+    """List un-posted bills coming due within REMINDER_LEAD_DAYS. No side effects.
+
+    Used as a scheduler ScheduledJob render. Unlike render_due_fixed_bills this
+    only reads — it never posts an expense. Bills already posted for the current
+    period are omitted (they're no longer "upcoming"). Returns None when nothing
+    is in the window or the house has no members.
+    """
+    members = database.list_members(conn, house_id)
+    if not members:
+        return None
+    names = {m["member_id"]: m["display_name"] for m in members}
+    period = period_key(today)
+
+    lines: list[str] = []
+    for bill in list_bills(conn, house_id):
+        if is_posted(conn, bill["bill_id"], period):
+            continue
+        days = days_until_due(today, bill["due_day"])
+        if days is None or days > REMINDER_LEAD_DAYS:
+            continue
+        when = "today" if days == 0 else f"in {days} day{'s' if days != 1 else ''}"
+        amount = f"${bill['amount_cents'] / 100:.2f}" if bill["amount_cents"] is not None else "varies"
+        payer = names.get(bill["payer_member_id"], "someone")
+        hint = "" if bill["kind"] == "fixed" else " — post with `/bill-post`"
+        lines.append(f"• **{bill['name']}** — {amount}, due {when}, paid by {payer}{hint}")
+
+    if not lines:
+        return None
+    return "🔔 **Upcoming bills**\n" + "\n".join(lines)
+
+
+def render_monthly_summary(conn: sqlite3.Connection, house_id: int, today: date) -> Optional[str]:
+    """Once-a-month outstanding-balance report. No side effects.
+
+    Returns None on every day except SUMMARY_DAY (so the daily scheduler tick
+    posts it once a month). Balances are cumulative all-time net, so the report
+    is labelled "as of <date>" rather than scoped to one month.
+    """
+    if not is_summary_day(today, SUMMARY_DAY):
+        return None
+    members = database.list_members(conn, house_id)
+    if not members:
+        return None
+
+    net = expenses.compute_net_balances(
+        expenses.get_debts(conn, house_id), expenses.get_payments(conn, house_id)
+    )
+    header = f"📊 **Monthly financial summary** (as of {today.isoformat()})"
+    if not net:
+        return f"{header}\nEveryone is settled up! 🎉"
+    names = {m["member_id"]: m["display_name"] for m in members}
+    return header + "\n" + "\n".join(expenses.format_net_balances(net, names))
 
 
 class Finance(commands.Cog):

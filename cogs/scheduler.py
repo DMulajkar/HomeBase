@@ -7,8 +7,7 @@ from discord.ext import commands, tasks
 
 import database
 import scheduler
-from cogs import chores, finance
-from cogs.channels import CATEGORY_NAME
+from cogs import channels, chores, finance
 
 REMINDER_HOUR_UTC = 9
 CHECK_INTERVAL_MINUTES = 15
@@ -25,6 +24,8 @@ class ScheduledJob:
 JOBS = [
     ScheduledJob(key="chores-reminder", channel="chores", render=chores.render_chores_reminder),
     ScheduledJob(key="fixed-bills", channel="rent-and-utilities", render=finance.render_due_fixed_bills),
+    ScheduledJob(key="bills-due-reminder", channel="rent-and-utilities", render=finance.render_upcoming_bills),
+    ScheduledJob(key="monthly-summary", channel="rent-and-utilities", render=finance.render_monthly_summary),
 ]
 
 
@@ -51,12 +52,9 @@ class Scheduler(commands.Cog):
         last_run = scheduler.get_last_run_date(self.bot.db, house["house_id"], job.key)
         if not scheduler.is_due(now, last_run, REMINDER_HOUR_UTC):
             return
-        # Resolve the target channel inside the HomeBase category only, so a
-        # like-named channel elsewhere in the server never receives the post.
-        category = discord.utils.get(guild.categories, name=CATEGORY_NAME)
-        if category is None:
-            return
-        channel = discord.utils.get(category.text_channels, name=job.channel)
+        # Resolve inside the HomeBase category only, so a like-named channel
+        # elsewhere in the server never receives the post.
+        channel = channels.resolve_house_channel(guild, job.channel)
         if channel is None:
             return
         message = job.render(self.bot.db, house["house_id"], now.date())
