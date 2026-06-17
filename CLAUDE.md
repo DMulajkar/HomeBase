@@ -20,7 +20,7 @@ There is no build step and no linter configured. `.env` (gitignored) must contai
 
 ## What this is
 
-A Discord bot for managing a shared house/apartment with roommates, built incrementally one feature at a time. So far: the expenses feature (`cogs/expenses.py`), channel setup (`cogs/channels.py`, an interactive picker that creates the house's Discord channels), the chores system slice 1 (`cogs/chores.py`, deterministic time-based rotation), and an auto-post scheduler (`scheduler.py` + `cogs/scheduler.py`) that posts a daily chore reminder. Future features (groceries, maintenance, governance) will each arrive as a separate cog. **Do not build features ahead of the current request** — the scope is deliberately one feature per pass.
+A Discord bot for managing a shared house/apartment with roommates, built incrementally one feature at a time. So far: the expenses feature (`cogs/expenses.py`), channel setup (`cogs/channels.py`, an interactive picker that creates the house's Discord channels), the chores system slice 1 (`cogs/chores.py`, deterministic time-based rotation), an auto-post scheduler (`scheduler.py` + `cogs/scheduler.py`) that posts a daily chore reminder, and the recurring bills feature (`cogs/finance.py`, fixed/variable bills that post into the expenses ledger; fixed bills auto-post on their due day). Future features (groceries, maintenance, governance) will each arrive as a separate cog. **Do not build features ahead of the current request** — the scope is deliberately one feature per pass.
 
 ## Architecture
 
@@ -65,8 +65,8 @@ Purpose: the bot always knows who owes money, who is owed, current balances, and
 
 - [x] Expense tracking, balance tracking, payment tracking, settlement calculations (already in expenses cog)
 - [x] Add `rent-and-utilities` to the channel catalog
-- [ ] Recurring **bills**: rent, utilities, internet, shared subscriptions (amount, due date, split rule)
-- [ ] `/add-bill`, `/rent`, `/utilities` commands; reuse `/pay` and `/balances`
+- [x] Recurring **bills**: rent, utilities, internet, shared subscriptions (`cogs/finance.py`; fixed vs variable kind, fixed payer per bill, equal split, monthly cadence). Spec: `docs/superpowers/specs/2026-06-17-recurring-bills-slice-1-design.md`.
+- [x] `/bill-add`, `/bills`, `/bill-post`, `/bill-remove` commands; fixed bills auto-post on their due day via the scheduler; reuse `/pay` and `/balances`. (Supersedes the literal `/rent`/`/utilities` names — those would be aliases.)
 - [ ] Due-date reminders (auto-post)
 - [ ] Monthly financial summary / report (auto-post): outstanding balances, who owes whom
 - [ ] Payment confirmations (auto-post)

@@ -28,6 +28,7 @@ class HomeBaseBot(commands.Bot):
         await self.load_extension("cogs.core")
         await self.load_extension("cogs.expenses")
         await self.load_extension("cogs.chores")
+        await self.load_extension("cogs.finance")
         await self.load_extension("cogs.scheduler")
         # GUILD_ID set -> instant sync to that one server (use during development).
         # Unset -> global sync, which can take up to ~an hour to appear in Discord.

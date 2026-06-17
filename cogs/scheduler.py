@@ -7,7 +7,7 @@ from discord.ext import commands, tasks
 
 import database
 import scheduler
-from cogs import chores
+from cogs import chores, finance
 from cogs.channels import CATEGORY_NAME
 
 REMINDER_HOUR_UTC = 9
@@ -24,6 +24,7 @@ class ScheduledJob:
 # Auto-posts register here. Each runs once per UTC day at REMINDER_HOUR_UTC.
 JOBS = [
     ScheduledJob(key="chores-reminder", channel="chores", render=chores.render_chores_reminder),
+    ScheduledJob(key="fixed-bills", channel="rent-and-utilities", render=finance.render_due_fixed_bills),
 ]
 
 
