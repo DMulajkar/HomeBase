@@ -99,4 +99,54 @@ Purpose: manage the shared grocery list, household supplies, and related spendin
 - [ ] Grocery spending analytics / reports (auto-post; can feed the finance system)
 - [ ] `/meal-plan` meal planning
 
+### Phase 4 — House life & coordination
+
+Purpose: the smaller quality-of-life systems that reduce roommate friction and keep shared knowledge in one place. Each is its own cog following the three-layer split; most are small enough to land in a single pass.
+
+- [ ] **Shared meal voting** — propose meals and vote; the bot tallies and announces the winner. Feeds Phase 3 meal planning and grocery lists.
+- [ ] **Subscription tracker** — track shared subscriptions (Netflix, Spotify Family, Amazon Prime, Costco membership): cost, renewal date, who pays. Likely a thin layer over the finance bills cog (a subscription is a fixed recurring bill) with subscription-specific listing.
+- [ ] **House wiki** — store and retrieve house reference info: Wi-Fi password, landlord contact, lease information, utility account numbers, parking rules. Simple key/value notes per house, retrievable on demand.
+- [ ] **Leaderboards** — monthly contribution rankings (chores completed, etc.), auto-posted. Example:
+
+  ```
+  🏆 June Rankings
+  1. Sarah
+  2. Dhruv
+  3. Ryan
+  ```
+
+- [ ] **Vacation mode** — temporarily remove someone from the chore rotation, recalculate bill splits to exclude them for the period, and pause their reminders; restore on return.
+- [ ] **Roommate birthdays** — store birthdays and auto-post reminders.
+- [ ] **Anonymous suggestions** — `/suggestion` posts an anonymized suggestion to the house to surface tension without attribution.
+
+### Phase 5 — House Command Center (the unifying dashboard)
+
+Purpose: one command that rolls up the state of every other system. Depends on Phases 1–4 being in place (it reads from them; it owns no new domain data).
+
+- [ ] **`/homebase`** — a single at-a-glance status report aggregating across cogs. Example:
+
+  ```
+  🏠 HOMEBASE
+
+  Bills Due:          2
+  Chores Due:         4
+  Groceries Needed:   8
+  Maintenance Issues: 1
+  House Health:       92/100
+
+  Top Priority: Pay electric bill by Thursday.
+  ```
+
+  Keep the aggregation/scoring (e.g. "house health", "top priority") as pure functions (layer 1) fed by each cog's existing read functions, so it is unit-testable without Discord.
+
+### Phase 6 — AI features
+
+Purpose: natural-language and document-understanding capabilities layered on top of the operational systems. These call out to an LLM and/or vision model; keep the prompt-building and response-parsing as pure functions (layer 1) so they can be tested with canned model responses, and isolate the model client behind a thin adapter. Build these last — they depend on the data the earlier phases produce.
+
+- [ ] **House chat assistant** — answer natural-language questions against house data: "Who owes money?", "What's overdue?", "What chores are due today?", "What groceries do we need?". Routes the question to the relevant cog's read functions and summarizes.
+- [ ] **AI meal planning** — given a constraint ("Feed 6 people for under $80"), return a shopping list, recipes, and estimated costs; can feed the grocery list.
+- [ ] **Bill scanner** — upload a utility-bill PDF or image; extract the amount (vision/OCR), split it automatically, and create the payment/expense + reminders. Feeds the finance cog.
+- [ ] **Usage prediction** — predict depletion from consumption patterns ("Toilet paper will run out in 6 days") and warn ahead of time. Feeds grocery inventory.
+- [ ] **AI spending coach** — flag anomalies in spending and suggest likely causes. Example: "Electric bill is 22% higher this month. Possible causes: AC usage, more occupants."
+
 Each phase is its own cog owning its own tables (`init_tables`), following the three-layer split and the guard pattern. Automated posts depend on the scheduler prerequisite above.
