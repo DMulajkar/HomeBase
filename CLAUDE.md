@@ -20,7 +20,7 @@ There is no build step and no linter configured. `.env` (gitignored) must contai
 
 ## What this is
 
-A Discord bot for managing a shared house/apartment with roommates, built incrementally one feature at a time. So far: the expenses feature (`cogs/expenses.py`) and channel setup (`cogs/channels.py`, an interactive picker that creates the house's Discord channels). Future features (chores, groceries, maintenance, scheduling, governance) will each arrive as a separate cog. **Do not build features ahead of the current request** — the scope is deliberately one feature per pass.
+A Discord bot for managing a shared house/apartment with roommates, built incrementally one feature at a time. So far: the expenses feature (`cogs/expenses.py`), channel setup (`cogs/channels.py`, an interactive picker that creates the house's Discord channels), and the chores system slice 1 (`cogs/chores.py`, deterministic time-based rotation). Future features (groceries, maintenance, scheduling, governance) will each arrive as a separate cog. **Do not build features ahead of the current request** — the scope is deliberately one feature per pass.
 
 ## Architecture
 
@@ -43,3 +43,57 @@ Tests target layers 1 and 2 only; there are no tests that spin up a Discord clie
 ## Adding a feature
 
 A new feature is a new file in `cogs/`. Wire it up by adding one `await self.load_extension("cogs.<name>")` line in `bot.py`'s `setup_hook`. Give the cog an `init_tables(conn)` for any new tables and call it from the cog's `__init__`. Keep pure logic and DB access as standalone functions (layers 1 and 2) so they can be unit-tested against the `conn` fixture; reserve the Cog methods for Discord plumbing and guards (DM rejection, house-exists check, membership check — see `_get_house_and_member` in `cogs/expenses.py` for the shared guard pattern). Give each feature one command per action with a single clear name (no shorthand aliases); when a command body would be shared, factor it into an `_impl` method.
+
+## Roadmap
+
+The target product is three operational house systems built around three core channels: `#chores`, `#rent-and-utilities`, and `#groceries`. This roadmap is the **plan**, not a license to build ahead — the one-feature-per-pass rule above still holds. Build phases top to bottom; within a phase, land features one at a time with tests. Check items off as they ship.
+
+### Done
+
+- [x] **Expenses cog** (`cogs/expenses.py`) — `/expense`, `/pay`, `/balances`; equal splits in integer cents; net pairwise balances. This is the foundation the finance system extends.
+- [x] **Channel setup** (`cogs/channels.py`) — interactive picker that creates the `HomeBase` category and channels. Note: the current catalog has no `rent-and-utilities` channel — Phase 1 should add it.
+- [x] **Chores slice 1** (`cogs/chores.py`) — deterministic time-based rotation (daily/weekly/monthly), `/chore-add`, `/chores`, `/complete`, `/swap` (one-off per-period override), `/chore-history` (completion tally). No auto-posting. Spec: `docs/superpowers/specs/2026-06-16-chores-slice-1-design.md`.
+
+### Cross-cutting prerequisite: scheduler
+
+Every system below needs the bot to **post automatically** (reminders, rotations, reports). There is no scheduler yet. Before the first automated post, add a background loop (`discord.ext.tasks` or an `asyncio` loop driven from `setup_hook`) plus a way to resolve each house's target channel by name (the channels cog already detects channels by name — reuse that). Keep the schedule-decision logic pure (layer 1: "given now + last-run, is this due?") so it is testable without Discord. Persisting per-house schedule state is a feature-cog-owned table.
+
+### Phase 1 — Finance system (`#rent-and-utilities`)
+
+Purpose: the bot always knows who owes money, who is owed, current balances, and upcoming bills. Extends the existing expenses cog (likely a new `cogs/finance.py` that reuses the splitting/balance helpers, or an expansion of `expenses.py`).
+
+- [x] Expense tracking, balance tracking, payment tracking, settlement calculations (already in expenses cog)
+- [ ] Add `rent-and-utilities` to the channel catalog
+- [ ] Recurring **bills**: rent, utilities, internet, shared subscriptions (amount, due date, split rule)
+- [ ] `/add-bill`, `/rent`, `/utilities` commands; reuse `/pay` and `/balances`
+- [ ] Due-date reminders (auto-post)
+- [ ] Monthly financial summary / report (auto-post): outstanding balances, who owes whom
+- [ ] Payment confirmations (auto-post)
+
+### Phase 2 — Chores system (`#chores`)
+
+Purpose: manage recurring house responsibilities and distribute them fairly over time.
+
+- [x] Chore definitions with cadence: daily / weekly / monthly (`/chore-add`)
+- [x] Chore assignments and **automatic rotation** (deterministic round-robin by time)
+- [x] `/chores` (view), `/complete`, `/swap`, `/chore-history`
+- [x] Completion tracking (contribution tally via `/chore-history`)
+- [ ] Confirmations on completion (auto-post)
+- [ ] Overdue detection + alerts (auto-post)
+- [ ] Streaks and contribution rankings (auto-post)
+- [ ] Weekly rotation + daily reminders (auto-post)
+
+Keep the fairness/rotation algorithm a pure function (layer 1) so it is unit-tested in isolation.
+
+### Phase 3 — Groceries system (`#groceries`)
+
+Purpose: manage the shared grocery list, household supplies, and related spending.
+
+- [ ] Shared grocery list with categories: Food / Household Supplies / Cleaning Supplies
+- [ ] `/grocery add`, `/grocery remove`, `/grocery bought`
+- [ ] Inventory tracking + low-stock warnings (auto-post)
+- [ ] Shopping-run / purchase confirmations and trip summaries (auto-post)
+- [ ] Grocery spending analytics / reports (auto-post; can feed the finance system)
+- [ ] `/meal-plan` meal planning
+
+Each phase is its own cog owning its own tables (`init_tables`), following the three-layer split and the guard pattern. Automated posts depend on the scheduler prerequisite above.
