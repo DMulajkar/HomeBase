@@ -2,7 +2,6 @@ import sqlite3
 from collections import defaultdict
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Optional
 
 import discord
 from discord import app_commands
@@ -167,42 +166,16 @@ class Expenses(commands.Cog):
         self.bot = bot
         init_tables(bot.db)
 
-    @app_commands.command(name="add-expense", description="Add a shared expense and split it equally")
+    @app_commands.command(name="expense", description="Add a shared expense and split it equally")
     @app_commands.describe(
         description="What the expense was for",
         amount="Amount in dollars, e.g. 42.50",
-        paid_by="Who paid (defaults to you)",
     )
-    async def add_expense(
+    async def expense(
         self,
         interaction: discord.Interaction,
         description: str,
         amount: float,
-        paid_by: Optional[discord.Member] = None,
-    ):
-        await self._add_expense_impl(interaction, description, amount, paid_by)
-
-    @app_commands.command(name="pay", description="Shorthand for /add-expense")
-    @app_commands.describe(
-        description="What the expense was for",
-        amount="Amount in dollars, e.g. 42.50",
-        paid_by="Who paid (defaults to you)",
-    )
-    async def pay(
-        self,
-        interaction: discord.Interaction,
-        description: str,
-        amount: float,
-        paid_by: Optional[discord.Member] = None,
-    ):
-        await self._add_expense_impl(interaction, description, amount, paid_by)
-
-    async def _add_expense_impl(
-        self,
-        interaction: discord.Interaction,
-        description: str,
-        amount: float,
-        paid_by: Optional[discord.Member],
     ):
         result = await _get_house_and_member(self.bot, interaction)
         if result is None:
@@ -212,33 +185,21 @@ class Expenses(commands.Cog):
             await interaction.response.send_message("Amount must be positive.", ephemeral=True)
             return
 
-        payer_member = member
-        payer_display = interaction.user.display_name
-        if paid_by is not None:
-            payer_row = database.get_member(self.bot.db, house["house_id"], str(paid_by.id))
-            if payer_row is None:
-                await interaction.response.send_message(
-                    f"{paid_by.display_name} isn't a member of this house.", ephemeral=True
-                )
-                return
-            payer_member = payer_row
-            payer_display = paid_by.display_name
-
         amount_cents = dollars_to_cents(amount)
         members = database.list_members(self.bot.db, house["house_id"])
         member_ids = [m["member_id"] for m in members]
         record_expense(
-            self.bot.db, house["house_id"], description, amount_cents, payer_member["member_id"], member_ids
+            self.bot.db, house["house_id"], description, amount_cents, member["member_id"], member_ids
         )
 
         await interaction.response.send_message(
-            f"Added expense '{description}' for ${amount:.2f}, paid by {payer_display}, "
+            f"Added expense '{description}' for ${amount:.2f}, paid by {interaction.user.display_name}, "
             f"split across {len(member_ids)} member(s)."
         )
 
-    @app_commands.command(name="settle", description="Record that you paid someone toward your shared debt")
+    @app_commands.command(name="pay", description="Record that you paid someone toward your shared debt")
     @app_commands.describe(amount="Amount in dollars you paid", to="Who you paid")
-    async def settle(self, interaction: discord.Interaction, amount: float, to: discord.Member):
+    async def pay(self, interaction: discord.Interaction, amount: float, to: discord.Member):
         result = await _get_house_and_member(self.bot, interaction)
         if result is None:
             return
@@ -261,10 +222,6 @@ class Expenses(commands.Cog):
 
     @app_commands.command(name="balances", description="Show who owes whom in this house")
     async def balances(self, interaction: discord.Interaction):
-        await self._balances_impl(interaction)
-
-    @app_commands.command(name="bal", description="Shorthand for /balances")
-    async def bal(self, interaction: discord.Interaction):
         await self._balances_impl(interaction)
 
     async def _balances_impl(self, interaction: discord.Interaction):
