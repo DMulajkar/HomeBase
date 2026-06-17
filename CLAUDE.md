@@ -82,9 +82,11 @@ Purpose: manage recurring house responsibilities and distribute them fairly over
 - [x] `/chores` (view), `/complete`, `/swap`, `/chore-history`
 - [x] Completion tracking (contribution tally via `/chore-history`)
 - [x] Daily chore reminder (auto-post to `#chores` via the scheduler)
-- [ ] Confirmations on completion (auto-post)
-- [ ] Overdue detection + alerts (auto-post)
-- [ ] Streaks and contribution rankings (auto-post)
+- [x] Confirmations on completion (auto-post): `/complete` posts a public confirmation with the member's contribution count to `#chores` (event-driven, like payment confirmations; `format_completion_confirmation` + `member_completion_count` in `cogs/chores.py`). Spec: `docs/superpowers/specs/2026-06-17-chore-completion-confirmations-slice-design.md`.
+- [~] ~~Overdue detection + alerts (auto-post)~~ — **dropped** (2026-06-17, product decision; not building).
+- [x] Streaks and contribution rankings (auto-post): monthly chore leaderboard posted to `#chores` on the 1st, summarizing the month that just ended, with per-member streaks (`render_rankings`, plus pure `rank_members` / `monthly_streak` / `format_rankings` in `cogs/chores.py`). Spec: `docs/superpowers/specs/2026-06-17-chore-rankings-slice-design.md`.
+
+**Phase 2 is complete** (overdue alerts deliberately dropped). Next up is Phase 3 (Groceries system).
 
 Keep the fairness/rotation algorithm a pure function (layer 1) so it is unit-tested in isolation.
 
@@ -138,6 +140,19 @@ Purpose: one command that rolls up the state of every other system. Depends on P
   ```
 
   Keep the aggregation/scoring (e.g. "house health", "top priority") as pure functions (layer 1) fed by each cog's existing read functions, so it is unit-testable without Discord.
+
+### Settings & configuration (cross-cutting)
+
+Purpose: let each house tune the bot's behavior instead of relying on hardcoded constants. Today values like `REMINDER_HOUR_UTC`, `REMINDER_LEAD_DAYS`, and `SUMMARY_DAY` are module-level constants shared by every house; this feature moves per-house overrides into the DB. Own its own `settings` table (one row per `house_id`, or key/value per house) and follow the three-layer split: pure validation/coercion, DB get/set with sensible defaults, and `/settings` plumbing.
+
+- [ ] **`/settings`** — view the house's current configuration (with defaults shown where unset).
+- [ ] **`/set`** — change one setting (validated). Candidate settings:
+  - reminder time of day + timezone (replaces the global `REMINDER_HOUR_UTC`; the scheduler note above flags this as the long-planned per-house config).
+  - due-date reminder lead days (`REMINDER_LEAD_DAYS`) and monthly-summary day (`SUMMARY_DAY`).
+  - per-auto-post enable/disable toggles (e.g. mute the daily chore reminder) — pairs with vacation mode in Phase 4.
+- [ ] Settings are read by the scheduler and feature cogs through a `get_setting(conn, house_id, key, default)` helper, so a missing row always falls back to today's constant (no migration needed; the constants become the defaults).
+
+Keep validation pure (layer 1) and the read path cheap — the scheduler tick reads settings per house every cycle.
 
 ### Phase 6 — AI features
 

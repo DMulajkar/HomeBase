@@ -134,9 +134,10 @@ its due date.
 - No arguments.
 
 #### `/complete`
-Marks a chore done for the current period. Anyone can complete any chore; it's
-credited to whoever runs the command (this feeds `/chore-history`). Completing
-the same chore twice in one period is rejected.
+Marks a chore done for the current period, and posts a public confirmation to
+`#chores` showing who finished it and their running contribution count. Anyone
+can complete any chore; it's credited to whoever runs the command (this feeds
+`/chore-history`). Completing the same chore twice in one period is rejected.
 - `name` — the chore you finished.
 
 #### `/swap`
@@ -203,6 +204,9 @@ real debt).
 The scheduler checks every 15 minutes and posts once per day, at **09:00 UTC**:
 
 - **Daily chore reminder** → `#chores`: the day's chore assignments.
+- **Monthly chore rankings** → `#chores`: on the 1st of each month, a 🏆
+  leaderboard of who completed the most chores in the month that just ended,
+  with any active per-member streaks.
 - **Fixed bills** → `#rent-and-utilities`: each fixed bill posts itself (creates
   the split expense) on its due day. Variable bills are never auto-posted —
   post them with `/bill-post`.
@@ -215,9 +219,13 @@ The scheduler checks every 15 minutes and posts once per day, at **09:00 UTC**:
 These require the matching channel to exist under the **HomeBase** category
 (created by `/house-setup` or `/setup-channels`).
 
-One finance post is **event-driven** rather than scheduled: a **payment
-confirmation** is posted to `#rent-and-utilities` the moment someone runs
-`/pay` (see the `/pay` command above).
+Two posts are **event-driven** rather than scheduled, firing the moment the
+command runs:
+
+- A **payment confirmation** is posted to `#rent-and-utilities` when someone
+  runs `/pay` (see the `/pay` command above).
+- A **completion confirmation** is posted to `#chores` when someone runs
+  `/complete` (see the `/complete` command above).
 
 ## Project layout
 

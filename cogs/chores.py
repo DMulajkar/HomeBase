@@ -1,3 +1,4 @@
+import calendar
 import sqlite3
 from datetime import date, datetime, timedelta, timezone
 from typing import Literal, Optional
@@ -7,8 +8,10 @@ from discord import app_commands
 from discord.ext import commands
 
 import database
+from cogs import channels
 
 CADENCES = ("daily", "weekly", "monthly")
+RANKINGS_DAY = 1  # day of the month to post the previous month's chore rankings
 
 
 # --- Layer 1: pure rotation logic (no I/O, unit-tested) ---
@@ -41,6 +44,99 @@ def assignee_for_period(member_ids_ordered: list[int], period_index: int) -> Opt
     if not member_ids_ordered:
         return None
     return member_ids_ordered[period_index % len(member_ids_ordered)]
+
+
+def _ordinal(n: int) -> str:
+    """1 -> '1st', 2 -> '2nd', 11 -> '11th', 23 -> '23rd'."""
+    if 10 <= n % 100 <= 20:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+
+def format_completion_confirmation(member_name: object, chore_name: object, total_completions: int) -> str:
+    """Public confirmation posted when a chore is completed.
+
+    `total_completions` is the member's all-time chore count (including this one);
+    it tacks on a small bit of recognition when known.
+    """
+    base = f"✅ **{member_name}** completed **{chore_name}** — nice work!"
+    if total_completions > 0:
+        return f"{base} That's their {_ordinal(total_completions)} chore done."
+    return base
+
+
+def _prev_year_month(year: int, month: int) -> tuple[int, int]:
+    """The calendar month before (year, month)."""
+    return (year - 1, 12) if month == 1 else (year, month - 1)
+
+
+def previous_month(today: date) -> tuple[int, int]:
+    """The (year, month) of the month before today's — what rankings summarize."""
+    return _prev_year_month(today.year, today.month)
+
+
+def is_rankings_day(today: date, rankings_day: int) -> bool:
+    """Whether today is the day of the month to post chore rankings."""
+    return today.day == rankings_day
+
+
+def rank_members(counts: list[tuple[int, Optional[str], int]]) -> list[tuple[int, Optional[str], int]]:
+    """Rank members by completion count, dropping zeros.
+
+    Input is `(member_id, name, count)` tuples (any order). Output is
+    `(rank, name, count)` sorted by count desc, with standard competition
+    ranking for ties (1, 2, 2, 4). Members with zero completions are excluded.
+    """
+    nonzero = sorted(
+        ((name, cnt) for _id, name, cnt in counts if cnt > 0),
+        key=lambda nc: -nc[1],
+    )
+    ranked: list[tuple[int, Optional[str], int]] = []
+    prev_cnt: Optional[int] = None
+    prev_rank = 0
+    for i, (name, cnt) in enumerate(nonzero, start=1):
+        if cnt == prev_cnt:
+            rank = prev_rank
+        else:
+            rank = i
+            prev_rank, prev_cnt = i, cnt
+        ranked.append((rank, name, cnt))
+    return ranked
+
+
+def monthly_streak(month_keys: set[str], year: int, month: int) -> int:
+    """Consecutive months (ending at the given year/month) present in `month_keys`.
+
+    `month_keys` holds 'YYYY-MM' strings for months the member completed a chore.
+    Returns 0 if the ending month itself isn't present.
+    """
+    streak = 0
+    y, m = year, month
+    while f"{y:04d}-{m:02d}" in month_keys:
+        streak += 1
+        y, m = _prev_year_month(y, m)
+    return streak
+
+
+def _medal(rank: int) -> str:
+    return {1: "🥇", 2: "🥈", 3: "🥉"}.get(rank, f"{rank}.")
+
+
+def format_rankings(
+    month_label: str,
+    ranked: list[tuple[int, Optional[str], int]],
+    streaks: list[tuple[Optional[str], int]],
+) -> str:
+    """The monthly chore-rankings post: a leaderboard plus any active streaks."""
+    lines = [f"🏆 **{month_label} Rankings**"]
+    for rank, name, cnt in ranked:
+        lines.append(f"{_medal(rank)} {name} — {cnt}")
+    if streaks:
+        parts = [f"{name} ({n} month{'s' if n != 1 else ''})" for name, n in streaks]
+        lines.append("🔥 **Streaks**: " + ", ".join(parts))
+    return "\n".join(lines)
 
 
 def period_end_date(cadence: str, start_date: date, period_index: int) -> date:
@@ -176,6 +272,48 @@ def completion_counts(conn: sqlite3.Connection, house_id: int) -> list[tuple[int
     return [(r["member_id"], r["display_name"], r["cnt"]) for r in rows]
 
 
+def member_completion_count(conn: sqlite3.Connection, house_id: int, member_id: int) -> int:
+    """All-time count of chores this member has completed in the house."""
+    row = conn.execute(
+        "SELECT COUNT(*) AS cnt FROM chore_completions cc "
+        "JOIN chores c ON cc.chore_id = c.chore_id "
+        "WHERE c.house_id = ? AND cc.member_id = ?",
+        (house_id, member_id),
+    ).fetchone()
+    return row["cnt"]
+
+
+def completion_counts_for_month(
+    conn: sqlite3.Connection, house_id: int, year: int, month: int
+) -> list[tuple[int, Optional[str], int]]:
+    """Per-member completion counts within a single calendar month."""
+    month_key = f"{year:04d}-{month:02d}"
+    rows = conn.execute(
+        "SELECT m.member_id, m.display_name, COUNT(cc.completion_id) AS cnt "
+        "FROM members m "
+        "LEFT JOIN chore_completions cc "
+        "  ON cc.member_id = m.member_id AND substr(cc.completed_at, 1, 7) = ? "
+        "WHERE m.house_id = ? "
+        "GROUP BY m.member_id ORDER BY cnt DESC, m.member_id",
+        (month_key, house_id),
+    ).fetchall()
+    return [(r["member_id"], r["display_name"], r["cnt"]) for r in rows]
+
+
+def completion_months(conn: sqlite3.Connection, house_id: int) -> dict[int, set[str]]:
+    """Map each member to the set of 'YYYY-MM' months they completed any chore."""
+    rows = conn.execute(
+        "SELECT cc.member_id, substr(cc.completed_at, 1, 7) AS ym "
+        "FROM chore_completions cc JOIN members m ON m.member_id = cc.member_id "
+        "WHERE m.house_id = ? GROUP BY cc.member_id, ym",
+        (house_id,),
+    ).fetchall()
+    result: dict[int, set[str]] = {}
+    for r in rows:
+        result.setdefault(r["member_id"], set()).add(r["ym"])
+    return result
+
+
 def current_assignee(
     conn: sqlite3.Connection, chore: sqlite3.Row, member_ids_ordered: list[int], today: date
 ) -> tuple[Optional[int], bool, bool, int]:
@@ -209,6 +347,33 @@ def render_chores_reminder(conn: sqlite3.Connection, house_id: int, today: date)
         sw = " (swapped)" if swapped else ""
         lines.append(f"- **{c['name']}** ({c['cadence']}) → {assignee}{sw} · {status}")
     return "\n".join(lines)
+
+
+def render_rankings(conn: sqlite3.Connection, house_id: int, today: date) -> Optional[str]:
+    """Once-a-month chore leaderboard for the month that just ended. No side effects.
+
+    Returns None except on RANKINGS_DAY, and None if nobody completed a chore in
+    the summarized month (nothing to celebrate). Streaks count consecutive months
+    ending at the summarized month.
+    """
+    if not is_rankings_day(today, RANKINGS_DAY):
+        return None
+    year, month = previous_month(today)
+    counts = completion_counts_for_month(conn, house_id, year, month)
+    ranked = rank_members(counts)
+    if not ranked:
+        return None
+
+    months_by_member = completion_months(conn, house_id)
+    streaks: list[tuple[Optional[str], int]] = []
+    for member_id, name, _cnt in counts:
+        n = monthly_streak(months_by_member.get(member_id, set()), year, month)
+        if n >= 2:
+            streaks.append((name, n))
+    streaks.sort(key=lambda s: (-s[1], str(s[0])))
+
+    month_label = f"{calendar.month_name[month]} {year}"
+    return format_rankings(month_label, ranked, streaks)
 
 
 # --- Layer 3: Discord plumbing and guards ---
@@ -305,9 +470,24 @@ class Chores(commands.Cog):
         except ValueError as e:
             await interaction.response.send_message(str(e), ephemeral=True)
             return
-        await interaction.response.send_message(
-            f"Nice — {interaction.user.display_name} completed '{name}'. ✅"
-        )
+
+        total = member_completion_count(self.bot.db, house["house_id"], member["member_id"])
+        confirmation = format_completion_confirmation(interaction.user.display_name, name, total)
+
+        # Announce to the house's #chores channel. If it exists and isn't where
+        # the command was run, ack privately and post there; otherwise the public
+        # interaction response is the confirmation (no duplicate message).
+        channel = channels.resolve_house_channel(interaction.guild, "chores")
+        if channel is not None and channel.id != interaction.channel_id:
+            await interaction.response.send_message(
+                f"Recorded — posted the confirmation in {channel.mention}.", ephemeral=True
+            )
+            try:
+                await channel.send(confirmation)
+            except discord.Forbidden:
+                pass
+        else:
+            await interaction.response.send_message(confirmation)
 
     @app_commands.command(name="swap", description="Hand off this period's chore to another member")
     @app_commands.describe(name="The chore to reassign", member="Who will do it this period")
