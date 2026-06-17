@@ -51,6 +51,10 @@ def get_house(conn: sqlite3.Connection, guild_id: str) -> Optional[sqlite3.Row]:
     return conn.execute("SELECT * FROM houses WHERE guild_id = ?", (guild_id,)).fetchone()
 
 
+def list_houses(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    return conn.execute("SELECT * FROM houses ORDER BY house_id").fetchall()
+
+
 def add_member(conn: sqlite3.Connection, house_id: int, discord_user_id: str, display_name: Optional[str]) -> int:
     try:
         cur = conn.execute(

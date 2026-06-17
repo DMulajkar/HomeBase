@@ -20,7 +20,7 @@ There is no build step and no linter configured. `.env` (gitignored) must contai
 
 ## What this is
 
-A Discord bot for managing a shared house/apartment with roommates, built incrementally one feature at a time. So far: the expenses feature (`cogs/expenses.py`), channel setup (`cogs/channels.py`, an interactive picker that creates the house's Discord channels), and the chores system slice 1 (`cogs/chores.py`, deterministic time-based rotation). Future features (groceries, maintenance, scheduling, governance) will each arrive as a separate cog. **Do not build features ahead of the current request** — the scope is deliberately one feature per pass.
+A Discord bot for managing a shared house/apartment with roommates, built incrementally one feature at a time. So far: the expenses feature (`cogs/expenses.py`), channel setup (`cogs/channels.py`, an interactive picker that creates the house's Discord channels), the chores system slice 1 (`cogs/chores.py`, deterministic time-based rotation), and an auto-post scheduler (`scheduler.py` + `cogs/scheduler.py`) that posts a daily chore reminder. Future features (groceries, maintenance, governance) will each arrive as a separate cog. **Do not build features ahead of the current request** — the scope is deliberately one feature per pass.
 
 ## Architecture
 
@@ -53,10 +53,11 @@ The target product is three operational house systems built around three core ch
 - [x] **Expenses cog** (`cogs/expenses.py`) — `/expense`, `/pay`, `/balances`; equal splits in integer cents; net pairwise balances. This is the foundation the finance system extends.
 - [x] **Channel setup** (`cogs/channels.py`) — interactive picker that creates the `HomeBase` category and channels. Note: the current catalog has no `rent-and-utilities` channel — Phase 1 should add it.
 - [x] **Chores slice 1** (`cogs/chores.py`) — deterministic time-based rotation (daily/weekly/monthly), `/chore-add`, `/chores`, `/complete`, `/swap` (one-off per-period override), `/chore-history` (completion tally). No auto-posting. Spec: `docs/superpowers/specs/2026-06-16-chores-slice-1-design.md`.
+- [x] **Auto-post scheduler** (`scheduler.py` + `cogs/scheduler.py`) — `discord.ext.tasks` loop (15 min) that runs once-daily jobs at `REMINDER_HOUR_UTC` per house, resolving the target channel by name. Pure `is_due(now, last_run, hour)`; per-(house, job) state in `schedule_state`. Jobs register in the `JOBS` list. First job: daily chore reminder to `#chores`. Spec: `docs/superpowers/specs/2026-06-17-auto-post-scheduler-slice-1-design.md`.
 
-### Cross-cutting prerequisite: scheduler
+### Cross-cutting prerequisite: scheduler — DONE
 
-Every system below needs the bot to **post automatically** (reminders, rotations, reports). There is no scheduler yet. Before the first automated post, add a background loop (`discord.ext.tasks` or an `asyncio` loop driven from `setup_hook`) plus a way to resolve each house's target channel by name (the channels cog already detects channels by name — reuse that). Keep the schedule-decision logic pure (layer 1: "given now + last-run, is this due?") so it is testable without Discord. Persisting per-house schedule state is a feature-cog-owned table.
+The scheduler exists (`scheduler.py` pure/DB + `cogs/scheduler.py` loop). To add a new auto-post: write a `render(conn, house_id, today) -> str | None` function in the feature cog and append a `ScheduledJob(key, channel, render)` to `JOBS` in `cogs/scheduler.py`. All jobs currently run once daily at `REMINDER_HOUR_UTC` (per-house time/timezone config is still a future addition). Schedule-decision logic stays pure (layer 1) and per-house state lives in `schedule_state`.
 
 ### Phase 1 — Finance system (`#rent-and-utilities`)
 
@@ -78,10 +79,10 @@ Purpose: manage recurring house responsibilities and distribute them fairly over
 - [x] Chore assignments and **automatic rotation** (deterministic round-robin by time)
 - [x] `/chores` (view), `/complete`, `/swap`, `/chore-history`
 - [x] Completion tracking (contribution tally via `/chore-history`)
+- [x] Daily chore reminder (auto-post to `#chores` via the scheduler)
 - [ ] Confirmations on completion (auto-post)
 - [ ] Overdue detection + alerts (auto-post)
 - [ ] Streaks and contribution rankings (auto-post)
-- [ ] Weekly rotation + daily reminders (auto-post)
 
 Keep the fairness/rotation algorithm a pure function (layer 1) so it is unit-tested in isolation.
 

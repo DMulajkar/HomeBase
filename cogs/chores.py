@@ -176,6 +176,41 @@ def completion_counts(conn: sqlite3.Connection, house_id: int) -> list[tuple[int
     return [(r["member_id"], r["display_name"], r["cnt"]) for r in rows]
 
 
+def current_assignee(
+    conn: sqlite3.Connection, chore: sqlite3.Row, member_ids_ordered: list[int], today: date
+) -> tuple[Optional[int], bool, bool, int]:
+    """Resolve the live state of a chore for the current period.
+
+    Returns (assignee_member_id, done, swapped, period_index). A per-period
+    swap override takes precedence over the round-robin assignee.
+    """
+    start = date.fromisoformat(chore["start_date"])
+    pidx = current_period_index(chore["cadence"], start, today)
+    override = get_override(conn, chore["chore_id"], pidx)
+    assignee_id = override["member_id"] if override else assignee_for_period(member_ids_ordered, pidx)
+    done = get_completion(conn, chore["chore_id"], pidx) is not None
+    return assignee_id, done, override is not None, pidx
+
+
+def render_chores_reminder(conn: sqlite3.Connection, house_id: int, today: date) -> Optional[str]:
+    """Build the daily chore reminder message, or None if there are no chores."""
+    house_chores = list_chores(conn, house_id)
+    if not house_chores:
+        return None
+    members = database.list_members(conn, house_id)
+    member_ids = [m["member_id"] for m in members]
+    names = {m["member_id"]: m["display_name"] for m in members}
+
+    lines = ["🧹 **Daily chore reminder**"]
+    for c in house_chores:
+        assignee_id, done, swapped, _ = current_assignee(conn, c, member_ids, today)
+        assignee = names.get(assignee_id, "—")
+        status = "✅ done" if done else "⏳ pending"
+        sw = " (swapped)" if swapped else ""
+        lines.append(f"- **{c['name']}** ({c['cadence']}) → {assignee}{sw} · {status}")
+    return "\n".join(lines)
+
+
 # --- Layer 3: Discord plumbing and guards ---
 
 
@@ -243,16 +278,12 @@ class Chores(commands.Cog):
 
         lines = ["**House chores**"]
         for c in house_chores:
-            start = date.fromisoformat(c["start_date"])
-            pidx = current_period_index(c["cadence"], start, today)
-            override = get_override(self.bot.db, c["chore_id"], pidx)
-            assignee_id = override["member_id"] if override else assignee_for_period(member_ids, pidx)
+            assignee_id, done, swapped, pidx = current_assignee(self.bot.db, c, member_ids, today)
             assignee = names.get(assignee_id, "—")
-            done = get_completion(self.bot.db, c["chore_id"], pidx) is not None
             status = "✅ done" if done else "⏳ pending"
-            swapped = " (swapped)" if override else ""
-            due = period_end_date(c["cadence"], start, pidx).isoformat()
-            lines.append(f"**{c['name']}** ({c['cadence']}) → {assignee}{swapped} · {status} · due {due}")
+            sw = " (swapped)" if swapped else ""
+            due = period_end_date(c["cadence"], date.fromisoformat(c["start_date"]), pidx).isoformat()
+            lines.append(f"**{c['name']}** ({c['cadence']}) → {assignee}{sw} · {status} · due {due}")
 
         await interaction.response.send_message("\n".join(lines))
 
