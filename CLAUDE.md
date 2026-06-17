@@ -109,7 +109,7 @@ Purpose: the smaller quality-of-life systems that reduce roommate friction and k
 - [ ] **Shared meal voting** — propose meals and vote; the bot tallies and announces the winner. Feeds Phase 3 meal planning and grocery lists.
 - [ ] **Subscription tracker** — track shared subscriptions (Netflix, Spotify Family, Amazon Prime, Costco membership): cost, renewal date, who pays. Likely a thin layer over the finance bills cog (a subscription is a fixed recurring bill) with subscription-specific listing.
 - [ ] **House wiki** — store and retrieve house reference info: Wi-Fi password, landlord contact, lease information, utility account numbers, parking rules. Simple key/value notes per house, retrievable on demand.
-- [ ] **Leaderboards** — monthly contribution rankings (chores completed, etc.), auto-posted. Example:
+- [x] **Leaderboards** (`cogs/leaderboard.py`) — cross-system monthly rankings combining chores (1 pt) and grocery runs (2 pts). `/leaderboard` shows the current month on demand; `render_monthly_leaderboard` auto-posts to `#chores` on the 1st (summarizes the previous month). Pure `compute_scores` (competition-tie ranking), `format_leaderboard`. Example output:
 
   ```
   🏆 June Rankings

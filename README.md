@@ -163,6 +163,13 @@ next period. `/chores` will show the chore as `(swapped)`.
 Shows a tally of how many chores each member has completed.
 - No arguments.
 
+#### `/leaderboard`
+Shows this month's house-wide contribution rankings, combining chores completed
+(1 pt each) and grocery runs (2 pts each). The same leaderboard is also
+auto-posted to `#chores` on the 1st of each month, summarizing the month that
+just ended.
+- No arguments.
+
 ### Bills (rent & utilities)
 
 A bill is a recurring template. Posting a bill for a month creates a normal
@@ -256,6 +263,8 @@ The scheduler checks every 15 minutes and posts once per day, at **09:00 UTC**:
 - **Monthly chore rankings** → `#chores`: on the 1st of each month, a 🏆
   leaderboard of who completed the most chores in the month that just ended,
   with any active per-member streaks.
+- **Monthly house leaderboard** → `#chores`: on the 1st of each month, a
+  cross-system ranking combining chores (1 pt) and grocery runs (2 pts).
 - **Fixed bills** → `#rent-and-utilities`: each fixed bill posts itself (creates
   the split expense) on its due day. Variable bills are never auto-posted —
   post them with `/bill-post`.
@@ -292,7 +301,8 @@ cogs/
   expenses.py      # /expense, /pay, /balances
   chores.py        # /chore-add, /chores, /complete, /swap, /chore-history
   finance.py       # /bill-add, /bills, /bill-post, /bill-remove
-  groceries.py     # /grocery-add, /groceries, /grocery-bought, /grocery-remove
+  groceries.py     # /grocery-add, /groceries, /grocery-bought, /grocery-remove, /grocery-done
+  leaderboard.py   # /leaderboard; monthly cross-system rankings auto-post
   scheduler.py     # the daily auto-post loop
 docs/superpowers/specs/   # design docs for each feature
 tests/             # unit tests (pure + DB layers)
