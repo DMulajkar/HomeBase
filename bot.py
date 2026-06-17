@@ -26,7 +26,15 @@ class HomeBaseBot(commands.Bot):
     async def setup_hook(self):
         await self.load_extension("cogs.core")
         await self.load_extension("cogs.expenses")
-        await self.tree.sync()
+        # GUILD_ID set -> instant sync to that one server (use during development).
+        # Unset -> global sync, which can take up to ~an hour to appear in Discord.
+        guild_id = os.environ.get("GUILD_ID")
+        if guild_id:
+            guild = discord.Object(id=int(guild_id))
+            self.tree.copy_global_to(guild=guild)
+            await self.tree.sync(guild=guild)
+        else:
+            await self.tree.sync()
 
 
 def main():
