@@ -78,6 +78,19 @@ def build_welcome_message(house_name: str) -> discord.Embed:
 # --- Layer 3: Discord plumbing (not unit-tested, no live-client tests) ---
 
 
+def resolve_house_channel(guild: discord.Guild, name: str):
+    """Find a text channel by name inside this guild's HomeBase category.
+
+    Returns the channel or None. Scoping the lookup to the category means a
+    like-named channel elsewhere in the server is never matched. Shared by the
+    scheduler's auto-posts and the /pay payment confirmation.
+    """
+    category = discord.utils.get(guild.categories, name=CATEGORY_NAME)
+    if category is None:
+        return None
+    return discord.utils.get(category.text_channels, name=name)
+
+
 async def create_selected_channels(
     guild: discord.Guild, selected_names: list[str], house_name: str
 ) -> tuple[list[str], list[str]]:

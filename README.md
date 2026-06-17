@@ -103,7 +103,9 @@ each owes you $20.
 
 #### `/pay`
 Records that you paid another member back toward what you owe them. This reduces
-your balance with that person.
+your balance with that person, and posts a confirmation to `#rent-and-utilities`
+showing the payment and your updated balance with them (settled up, still owing,
+or — if you overpaid — them now owing you).
 - `amount` — dollars you paid. Must be positive.
 - `to` — the member you paid.
 
@@ -212,6 +214,10 @@ The scheduler checks every 15 minutes and posts once per day, at **09:00 UTC**:
 
 These require the matching channel to exist under the **HomeBase** category
 (created by `/house-setup` or `/setup-channels`).
+
+One finance post is **event-driven** rather than scheduled: a **payment
+confirmation** is posted to `#rent-and-utilities` the moment someone runs
+`/pay` (see the `/pay` command above).
 
 ## Project layout
 
