@@ -264,6 +264,9 @@ The scheduler checks every 15 minutes and posts once per day, at **09:00 UTC**:
   move money ahead of time. Variable bills include a `/bill-post` nudge.
 - **Monthly financial summary** → `#rent-and-utilities`: on the 1st of each
   month, a report of outstanding balances (who owes whom).
+- **Monthly grocery spending report** → `#groceries`: on the 1st of each month,
+  a summary of last month's total grocery spend and a per-member breakdown of
+  who did shopping runs.
 
 These require the matching channel to exist under the **HomeBase** category
 (created by `/house-setup` or `/setup-channels`).

@@ -97,8 +97,10 @@ Purpose: manage the shared grocery list, household supplies, and related spendin
 - [x] **Groceries slice 1** (`cogs/groceries.py`) — shared grocery list with categories (Food / Household Supplies / Cleaning Supplies); `/grocery-add`, `/groceries` (view), `/grocery-bought`, `/grocery-remove`. Active items are unique per house via a partial index, so a bought item becomes history and can be needed again. No auto-posts yet. Spec: `docs/superpowers/specs/2026-06-17-groceries-slice-1-design.md`. (Command names are flat/hyphenated to match `/chore-add`, `/bill-add` — superseding the `/grocery add` subcommand spelling in the original roadmap.)
 - [~] ~~Inventory tracking + low-stock warnings (auto-post)~~ — **skipped** (product decision).
 - [x] Shopping-run trip summary: `/grocery-done` clears the whole active list (marks all items bought), optionally records a split expense for the total spend, and posts a trip summary to `#groceries` (event-driven, same channel-fallback pattern as `/pay` and `/complete`). Pure `format_trip_summary`; DB `finish_shopping_run`. Per-item confirmations were deliberately skipped (too noisy for grocery runs).
-- [ ] Grocery spending analytics / reports (auto-post; can feed the finance system)
-- [ ] `/meal-plan` meal planning
+- [x] Grocery spending analytics / reports (auto-post): monthly spend report posted to `#groceries` on the 1st, summarizing the previous month's total and per-member breakdown. Runs tracked in `grocery_runs` table (records `expense_id`, `amount_cents`, `run_at`). Pure `spending_by_member`, `format_spending_report`; DB `grocery_runs_for_month`; `render_spending_report` wired as a `ScheduledJob`.
+- [~] ~~`/meal-plan` meal planning~~ — **deferred to Phase 6 (AI features)**, where it fits better as an AI-assisted feature.
+
+**Phase 3 is complete.** Next up is Phase 4 (house life & coordination).
 
 ### Phase 4 — House life & coordination
 
@@ -158,7 +160,7 @@ Keep validation pure (layer 1) and the read path cheap — the scheduler tick re
 Purpose: natural-language and document-understanding capabilities layered on top of the operational systems. These call out to an LLM and/or vision model; keep the prompt-building and response-parsing as pure functions (layer 1) so they can be tested with canned model responses, and isolate the model client behind a thin adapter. Build these last — they depend on the data the earlier phases produce.
 
 - [ ] **House chat assistant** — answer natural-language questions against house data: "Who owes money?", "What's overdue?", "What chores are due today?", "What groceries do we need?". Routes the question to the relevant cog's read functions and summarizes.
-- [ ] **AI meal planning** — given a constraint ("Feed 6 people for under $80"), return a shopping list, recipes, and estimated costs; can feed the grocery list.
+- [ ] **AI meal planning / `/meal-plan`** — given a constraint ("Feed 6 people for under $80"), return a shopping list, recipes, and estimated costs; feeds the grocery list directly. (Deferred from Phase 3 — works better as an AI-assisted feature.)
 - [ ] **Bill scanner** — upload a utility-bill PDF or image; extract the amount (vision/OCR), split it automatically, and create the payment/expense + reminders. Feeds the finance cog.
 - [ ] **Usage prediction** — predict depletion from consumption patterns ("Toilet paper will run out in 6 days") and warn ahead of time. Feeds grocery inventory.
 - [ ] **AI spending coach** — flag anomalies in spending and suggest likely causes. Example: "Electric bill is 22% higher this month. Possible causes: AC usage, more occupants."

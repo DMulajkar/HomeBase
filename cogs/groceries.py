@@ -1,5 +1,6 @@
+import calendar
 import sqlite3
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Literal, Optional
 
 import discord
@@ -69,6 +70,35 @@ def format_trip_summary(
     return "\n".join(lines)
 
 
+def spending_by_member(
+    runs: list[tuple[str, int]]
+) -> list[tuple[str, int]]:
+    """Aggregate total spend per member name, sorted by spend descending.
+
+    `runs` is a list of (display_name, amount_cents) pairs (one per run).
+    """
+    totals: dict[str, int] = {}
+    for name, cents in runs:
+        totals[name] = totals.get(name, 0) + cents
+    return sorted(totals.items(), key=lambda nc: -nc[1])
+
+
+def format_spending_report(
+    month_label: str,
+    total_cents: int,
+    by_member: list[tuple[str, int]],
+    run_count: int,
+) -> str:
+    """Monthly grocery spending report."""
+    lines = [f"🛒 **{month_label} grocery spending**"]
+    lines.append(f"Total: **${total_cents / 100:.2f}** across {run_count} shopping run{'s' if run_count != 1 else ''}")
+    if by_member:
+        lines.append("\nRuns by member:")
+        for name, cents in by_member:
+            lines.append(f"- {name}: ${cents / 100:.2f}")
+    return "\n".join(lines)
+
+
 # --- Layer 2: DB access (conn first arg, unit-tested) ---
 
 
@@ -97,6 +127,18 @@ def init_tables(conn: sqlite3.Connection) -> None:
     conn.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS grocery_items_active_unique "
         "ON grocery_items(house_id, name) WHERE bought_at IS NULL"
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS grocery_runs (
+            run_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            house_id INTEGER NOT NULL REFERENCES houses(house_id),
+            member_id INTEGER NOT NULL REFERENCES members(member_id),
+            amount_cents INTEGER,
+            expense_id INTEGER REFERENCES expenses(expense_id),
+            run_at TEXT NOT NULL
+        )
+        """
     )
     conn.commit()
 
@@ -144,6 +186,36 @@ def remove_item(conn: sqlite3.Connection, house_id: int, name: str) -> bool:
     return cur.rowcount > 0
 
 
+def record_run(
+    conn: sqlite3.Connection,
+    house_id: int,
+    member_id: int,
+    amount_cents: Optional[int],
+    expense_id: Optional[int],
+) -> int:
+    cur = conn.execute(
+        "INSERT INTO grocery_runs (house_id, member_id, amount_cents, expense_id, run_at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (house_id, member_id, amount_cents, expense_id, _now_iso()),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+def grocery_runs_for_month(
+    conn: sqlite3.Connection, house_id: int, year: int, month: int
+) -> list[sqlite3.Row]:
+    """All runs in a calendar month that had an amount (i.e. recorded a spend)."""
+    month_key = f"{year:04d}-{month:02d}"
+    return conn.execute(
+        "SELECT gr.*, m.display_name FROM grocery_runs gr "
+        "JOIN members m ON m.member_id = gr.member_id "
+        "WHERE gr.house_id = ? AND substr(gr.run_at, 1, 7) = ? AND gr.amount_cents IS NOT NULL "
+        "ORDER BY gr.run_at",
+        (house_id, month_key),
+    ).fetchall()
+
+
 def finish_shopping_run(
     conn: sqlite3.Connection, house_id: int, member_id: int
 ) -> list[tuple[str, str]]:
@@ -163,6 +235,29 @@ def finish_shopping_run(
     )
     conn.commit()
     return [(row["category"], row["name"]) for row in items]
+
+
+def _prev_year_month(year: int, month: int) -> tuple[int, int]:
+    return (year - 1, 12) if month == 1 else (year, month - 1)
+
+
+def render_spending_report(conn: sqlite3.Connection, house_id: int, today: date) -> Optional[str]:
+    """Once-a-month grocery spending report. No side effects.
+
+    Posts on the 1st of each month summarizing the month that just ended.
+    Returns None if there were no recorded grocery spends that month.
+    """
+    if today.day != 1:
+        return None
+    year, month = _prev_year_month(today.year, today.month)
+    month_label = f"{calendar.month_name[month]} {year}"
+    runs = grocery_runs_for_month(conn, house_id, year, month)
+    if not runs:
+        return None
+    pairs = [(r["display_name"], r["amount_cents"]) for r in runs]
+    total = sum(c for _, c in pairs)
+    by_member = spending_by_member(pairs)
+    return format_spending_report(month_label, total, by_member, len(runs))
 
 
 # --- Layer 3: Discord plumbing and guards ---
@@ -277,9 +372,10 @@ class Groceries(commands.Cog):
         member_ids = [m["member_id"] for m in members]
 
         amount_cents: Optional[int] = None
+        expense_id: Optional[int] = None
         if amount is not None:
             amount_cents = expenses.dollars_to_cents(amount)
-            expenses.record_expense(
+            expense_id = expenses.record_expense(
                 self.bot.db,
                 house["house_id"],
                 "Groceries shopping run",
@@ -287,6 +383,8 @@ class Groceries(commands.Cog):
                 member["member_id"],
                 member_ids,
             )
+
+        record_run(self.bot.db, house["house_id"], member["member_id"], amount_cents, expense_id)
 
         summary = format_trip_summary(
             interaction.user.display_name, bought, amount_cents, len(member_ids)
