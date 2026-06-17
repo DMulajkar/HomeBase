@@ -203,16 +203,21 @@ class Expenses(commands.Cog):
         self.bot = bot
         init_tables(bot.db)
 
-    @app_commands.command(name="expense", description="Add a shared expense and split it equally")
+    @app_commands.command(
+        name="expense",
+        description="Add a shared expense (split equally, or charged entirely to one person)",
+    )
     @app_commands.describe(
         description="What the expense was for",
         amount="Amount in dollars, e.g. 42.50",
+        charge_to="Optional: charge the whole amount to this member instead of splitting it",
     )
     async def expense(
         self,
         interaction: discord.Interaction,
         description: str,
         amount: float,
+        charge_to: discord.Member | None = None,
     ):
         result = await _get_house_and_member(self.bot, interaction)
         if result is None:
@@ -223,6 +228,35 @@ class Expenses(commands.Cog):
             return
 
         amount_cents = dollars_to_cents(amount)
+
+        if charge_to is not None:
+            if charge_to.id == interaction.user.id:
+                await interaction.response.send_message(
+                    "Charging an expense to yourself has no effect.", ephemeral=True
+                )
+                return
+            to_row = database.get_member(self.bot.db, house["house_id"], str(charge_to.id))
+            if to_row is None:
+                await interaction.response.send_message(
+                    f"{charge_to.display_name} isn't a member of this house.", ephemeral=True
+                )
+                return
+            # A single-member split puts the whole amount on that one person's
+            # debt to the payer (you) — nothing is shared with the rest of the house.
+            record_expense(
+                self.bot.db,
+                house["house_id"],
+                description,
+                amount_cents,
+                member["member_id"],
+                [to_row["member_id"]],
+            )
+            await interaction.response.send_message(
+                f"Charged '{description}' (${amount:.2f}) entirely to {charge_to.display_name}, "
+                f"paid by {interaction.user.display_name} — {charge_to.display_name} owes you ${amount:.2f}."
+            )
+            return
+
         members = database.list_members(self.bot.db, house["house_id"])
         member_ids = [m["member_id"] for m in members]
         record_expense(
@@ -234,16 +268,21 @@ class Expenses(commands.Cog):
             f"split across {len(member_ids)} member(s)."
         )
 
-    @app_commands.command(name="pay", description="Record that you paid someone toward your shared debt")
-    @app_commands.describe(amount="Amount in dollars you paid", to="Who you paid")
-    async def pay(self, interaction: discord.Interaction, amount: float, to: discord.Member):
+    @app_commands.command(
+        name="pay",
+        description="Record a payment toward your shared debt (omit amount to settle in full)",
+    )
+    @app_commands.describe(
+        to="Who you paid",
+        amount="Amount in dollars you paid; leave blank to settle your whole balance with them",
+    )
+    async def pay(
+        self, interaction: discord.Interaction, to: discord.Member, amount: float | None = None
+    ):
         result = await _get_house_and_member(self.bot, interaction)
         if result is None:
             return
         house, member = result
-        if amount <= 0:
-            await interaction.response.send_message("Amount must be positive.", ephemeral=True)
-            return
         if to.id == interaction.user.id:
             await interaction.response.send_message("You can't settle up with yourself.", ephemeral=True)
             return
@@ -253,7 +292,23 @@ class Expenses(commands.Cog):
             await interaction.response.send_message(f"{to.display_name} isn't a member of this house.", ephemeral=True)
             return
 
-        amount_cents = dollars_to_cents(amount)
+        if amount is not None:
+            if amount <= 0:
+                await interaction.response.send_message("Amount must be positive.", ephemeral=True)
+                return
+            amount_cents = dollars_to_cents(amount)
+        else:
+            # No amount given: settle the full balance you currently owe them.
+            net_before = compute_net_balances(
+                get_debts(self.bot.db, house["house_id"]), get_payments(self.bot.db, house["house_id"])
+            )
+            amount_cents = net_between(net_before, member["member_id"], to_row["member_id"])
+            if amount_cents <= 0:
+                await interaction.response.send_message(
+                    f"You don't owe {to.display_name} anything to settle.", ephemeral=True
+                )
+                return
+
         record_settlement(self.bot.db, house["house_id"], member["member_id"], to_row["member_id"], amount_cents)
 
         net = compute_net_balances(

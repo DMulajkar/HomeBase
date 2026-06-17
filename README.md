@@ -97,19 +97,30 @@ members. The remainder (if it doesn't divide evenly) is distributed one cent at
 a time, so shares always sum exactly to the total.
 - `description` — what the expense was for, e.g. `Pizza night`.
 - `amount` — dollars, e.g. `42.50`. Must be positive.
+- `charge_to` *(optional)* — a single member to charge the **whole** amount to,
+  instead of splitting it. Use this when you fronted money for one person: it
+  goes entirely on their debt to you, and nobody else is involved. You can't
+  charge an expense to yourself.
 
-Example: `/expense description:Groceries amount:60` — if there are 3 members,
-each owes you $20.
+Examples:
+- `/expense description:Groceries amount:60` — if there are 3 members, each owes
+  you $20.
+- `/expense description:Bob's ticket amount:45 charge_to:@Bob` — Bob alone owes
+  you the full $45.
 
 #### `/pay`
 Records that you paid another member back toward what you owe them. This reduces
 your balance with that person, and posts a confirmation to `#rent-and-utilities`
 showing the payment and your updated balance with them (settled up, still owing,
 or — if you overpaid — them now owing you).
-- `amount` — dollars you paid. Must be positive.
 - `to` — the member you paid.
+- `amount` *(optional)* — dollars you paid. Must be positive. **Leave it blank to
+  settle your whole balance with them** — the bot pays off exactly what you
+  currently owe that person. If you don't owe them anything, it does nothing.
 
-Example: `/pay amount:20 to:@Alice`.
+Examples:
+- `/pay to:@Alice amount:20` — pay Alice $20 toward what you owe her.
+- `/pay to:@Alice` — settle up with Alice completely.
 
 #### `/balances`
 Shows who owes whom across the whole house (net of all expenses and payments).

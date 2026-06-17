@@ -74,3 +74,38 @@ def test_full_payment_settles(conn):
         expenses.get_debts(conn, house_id), expenses.get_payments(conn, house_id)
     )
     assert expenses.net_between(net, bob, alice) == 0
+
+
+# --- "settle in full": /pay with no amount uses the whole owed balance ---
+
+
+def test_settle_in_full_amount_is_the_owed_balance(conn):
+    """With no amount, /pay settles exactly what the payer currently owes."""
+    house_id, alice, bob = _house(conn)
+    # Alice fronts $100 split two ways -> Bob owes Alice $50.
+    expenses.record_expense(conn, house_id, "Rent", 10000, alice, [alice, bob])
+
+    net_before = expenses.compute_net_balances(
+        expenses.get_debts(conn, house_id), expenses.get_payments(conn, house_id)
+    )
+    # This is the amount the handler would settle when amount is omitted.
+    owed = expenses.net_between(net_before, bob, alice)
+    assert owed == 5000
+
+    expenses.record_settlement(conn, house_id, bob, alice, owed)
+    net_after = expenses.compute_net_balances(
+        expenses.get_debts(conn, house_id), expenses.get_payments(conn, house_id)
+    )
+    assert expenses.net_between(net_after, bob, alice) == 0  # fully settled
+
+
+def test_settle_in_full_when_nothing_owed_is_nonpositive(conn):
+    """When the payer owes nothing, the computed settle amount is <= 0 (handler rejects)."""
+    house_id, alice, bob = _house(conn)
+    # Bob fronts the expense, so Alice owes Bob — Bob owes Alice nothing.
+    expenses.record_expense(conn, house_id, "Rent", 10000, bob, [alice, bob])
+
+    net = expenses.compute_net_balances(
+        expenses.get_debts(conn, house_id), expenses.get_payments(conn, house_id)
+    )
+    assert expenses.net_between(net, bob, alice) <= 0
