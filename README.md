@@ -12,6 +12,8 @@ nagging.
   with completion tracking and a daily reminder.
 - **Bills** — recurring rent/utilities/subscriptions that post into the expense
   ledger; fixed bills post themselves on their due day.
+- **Groceries** — a shared shopping list grouped into Food / Household / Cleaning,
+  with add, bought, and remove.
 - **Channels** — an interactive picker that creates the house's Discord
   channels (`#chores`, `#rent-and-utilities`, `#groceries`, and more).
 
@@ -208,6 +210,42 @@ Deletes a recurring bill definition. Expenses it already created stay (they're
 real debt).
 - `name` — the bill to remove.
 
+### Groceries
+
+A shared grocery list grouped into three categories: **Food**, **Household
+Supplies**, and **Cleaning Supplies**. Items stay on the list until someone buys
+or removes them; a bought item drops off but is kept as history, so you can add
+it again next time you run low.
+
+#### `/grocery-add`
+Adds an item to the list under a category.
+- `name` — what to buy, e.g. `Milk`.
+- `category` — `Food`, `Household Supplies`, or `Cleaning Supplies`.
+
+The same item can't be on the active list twice.
+
+#### `/groceries`
+Shows the current list, grouped by category.
+- No arguments.
+
+#### `/grocery-bought`
+Marks an item as bought, removing it from the active list (and crediting you).
+- `name` — the item you bought.
+
+#### `/grocery-remove`
+Removes an item that's no longer needed (without marking it bought).
+- `name` — the item to remove.
+
+#### `/grocery-done`
+Ends a shopping run — marks **everything** on the list as bought, clears it for
+next time, and posts a trip summary to `#groceries`.
+- `amount` *(optional)* — total spent in dollars. If provided, it's recorded as a
+  shared expense and split equally among all house members, flowing into `/balances`
+  and `/pay` like any other expense.
+
+The workflow: add items throughout the week with `/grocery-add`, then run
+`/grocery-done` (with the receipt total) when you get home.
+
 ---
 
 ## Automatic posts
@@ -251,6 +289,7 @@ cogs/
   expenses.py      # /expense, /pay, /balances
   chores.py        # /chore-add, /chores, /complete, /swap, /chore-history
   finance.py       # /bill-add, /bills, /bill-post, /bill-remove
+  groceries.py     # /grocery-add, /groceries, /grocery-bought, /grocery-remove
   scheduler.py     # the daily auto-post loop
 docs/superpowers/specs/   # design docs for each feature
 tests/             # unit tests (pure + DB layers)

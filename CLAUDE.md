@@ -20,7 +20,7 @@ There is no build step and no linter configured. `.env` (gitignored) must contai
 
 ## What this is
 
-A Discord bot for managing a shared house/apartment with roommates, built incrementally one feature at a time. So far: the expenses feature (`cogs/expenses.py`), channel setup (`cogs/channels.py`, an interactive picker that creates the house's Discord channels), the chores system slice 1 (`cogs/chores.py`, deterministic time-based rotation), an auto-post scheduler (`scheduler.py` + `cogs/scheduler.py`) that posts a daily chore reminder, and the recurring bills feature (`cogs/finance.py`, fixed/variable bills that post into the expenses ledger; fixed bills auto-post on their due day). Future features (groceries, maintenance, governance) will each arrive as a separate cog. **Do not build features ahead of the current request** — the scope is deliberately one feature per pass.
+A Discord bot for managing a shared house/apartment with roommates, built incrementally one feature at a time. So far: the expenses feature (`cogs/expenses.py`), channel setup (`cogs/channels.py`, an interactive picker that creates the house's Discord channels), the chores system slice 1 (`cogs/chores.py`, deterministic time-based rotation), an auto-post scheduler (`scheduler.py` + `cogs/scheduler.py`) that posts a daily chore reminder, the recurring bills feature (`cogs/finance.py`, fixed/variable bills that post into the expenses ledger; fixed bills auto-post on their due day), and the groceries feature (`cogs/groceries.py`, a shared categorized grocery list). Future features (maintenance, governance) will each arrive as a separate cog. **Do not build features ahead of the current request** — the scope is deliberately one feature per pass.
 
 ## Architecture
 
@@ -94,10 +94,9 @@ Keep the fairness/rotation algorithm a pure function (layer 1) so it is unit-tes
 
 Purpose: manage the shared grocery list, household supplies, and related spending.
 
-- [ ] Shared grocery list with categories: Food / Household Supplies / Cleaning Supplies
-- [ ] `/grocery add`, `/grocery remove`, `/grocery bought`
-- [ ] Inventory tracking + low-stock warnings (auto-post)
-- [ ] Shopping-run / purchase confirmations and trip summaries (auto-post)
+- [x] **Groceries slice 1** (`cogs/groceries.py`) — shared grocery list with categories (Food / Household Supplies / Cleaning Supplies); `/grocery-add`, `/groceries` (view), `/grocery-bought`, `/grocery-remove`. Active items are unique per house via a partial index, so a bought item becomes history and can be needed again. No auto-posts yet. Spec: `docs/superpowers/specs/2026-06-17-groceries-slice-1-design.md`. (Command names are flat/hyphenated to match `/chore-add`, `/bill-add` — superseding the `/grocery add` subcommand spelling in the original roadmap.)
+- [~] ~~Inventory tracking + low-stock warnings (auto-post)~~ — **skipped** (product decision).
+- [x] Shopping-run trip summary: `/grocery-done` clears the whole active list (marks all items bought), optionally records a split expense for the total spend, and posts a trip summary to `#groceries` (event-driven, same channel-fallback pattern as `/pay` and `/complete`). Pure `format_trip_summary`; DB `finish_shopping_run`. Per-item confirmations were deliberately skipped (too noisy for grocery runs).
 - [ ] Grocery spending analytics / reports (auto-post; can feed the finance system)
 - [ ] `/meal-plan` meal planning
 
