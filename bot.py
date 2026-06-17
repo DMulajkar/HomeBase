@@ -24,6 +24,7 @@ class HomeBaseBot(commands.Bot):
         database.init_db(self.db)
 
     async def setup_hook(self):
+        await self.load_extension("cogs.channels")
         await self.load_extension("cogs.core")
         await self.load_extension("cogs.expenses")
         # GUILD_ID set -> instant sync to that one server (use during development).

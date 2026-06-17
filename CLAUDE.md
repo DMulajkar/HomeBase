@@ -20,7 +20,7 @@ There is no build step and no linter configured. `.env` (gitignored) must contai
 
 ## What this is
 
-A Discord bot for managing a shared house/apartment with roommates, built incrementally one feature at a time. Only the expenses feature exists so far. Future features (chores, groceries, maintenance, scheduling, governance) will each arrive as a separate cog. **Do not build features ahead of the current request** — the scope is deliberately one feature per pass.
+A Discord bot for managing a shared house/apartment with roommates, built incrementally one feature at a time. So far: the expenses feature (`cogs/expenses.py`) and channel setup (`cogs/channels.py`, an interactive picker that creates the house's Discord channels). Future features (chores, groceries, maintenance, scheduling, governance) will each arrive as a separate cog. **Do not build features ahead of the current request** — the scope is deliberately one feature per pass.
 
 ## Architecture
 
@@ -42,4 +42,4 @@ Tests target layers 1 and 2 only; there are no tests that spin up a Discord clie
 
 ## Adding a feature
 
-A new feature is a new file in `cogs/`. Wire it up by adding one `await self.load_extension("cogs.<name>")` line in `bot.py`'s `setup_hook`. Give the cog an `init_tables(conn)` for any new tables and call it from the cog's `__init__`. Keep pure logic and DB access as standalone functions (layers 1 and 2) so they can be unit-tested against the `conn` fixture; reserve the Cog methods for Discord plumbing and guards (DM rejection, house-exists check, membership check — see `_get_house_and_member` in `cogs/expenses.py` for the shared guard pattern). For high-traffic commands, add a short alias command that shares the same `_impl` method (e.g. `/pay` → add-expense, `/bal` → balances).
+A new feature is a new file in `cogs/`. Wire it up by adding one `await self.load_extension("cogs.<name>")` line in `bot.py`'s `setup_hook`. Give the cog an `init_tables(conn)` for any new tables and call it from the cog's `__init__`. Keep pure logic and DB access as standalone functions (layers 1 and 2) so they can be unit-tested against the `conn` fixture; reserve the Cog methods for Discord plumbing and guards (DM rejection, house-exists check, membership check — see `_get_house_and_member` in `cogs/expenses.py` for the shared guard pattern). Give each feature one command per action with a single clear name (no shorthand aliases); when a command body would be shared, factor it into an `_impl` method.

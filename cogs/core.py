@@ -3,6 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import database
+from cogs.channels import ChannelSetupView
 
 
 class Core(commands.Cog):
@@ -21,8 +22,11 @@ class Core(commands.Cog):
             return
 
         database.create_house(self.bot.db, str(interaction.guild_id), interaction.guild.name)
+        view = ChannelSetupView(interaction.guild.name, interaction.user.id)
         await interaction.response.send_message(
-            f"House set up for {interaction.guild.name}! Members can now run /join-house."
+            f"House set up for {interaction.guild.name}! Members can now run /join-house.\n\n"
+            "Want me to create some channels? Pick from the list, then press **Create channels**:",
+            view=view,
         )
 
     @app_commands.command(name="join-house", description="Join this server's house")
