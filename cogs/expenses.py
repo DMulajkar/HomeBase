@@ -51,6 +51,14 @@ def compute_net_balances(
     return result
 
 
+def format_net_balances(net: dict[tuple[int, int], int], names: dict[int, object]) -> list[str]:
+    """Render the net-balance map as '<ower> owes <owee> $X.XX' lines."""
+    return [
+        f"{names.get(ower_id, ower_id)} owes {names.get(owee_id, owee_id)} ${cents / 100:.2f}"
+        for (ower_id, owee_id), cents in net.items()
+    ]
+
+
 def init_tables(conn: sqlite3.Connection) -> None:
     conn.execute(
         """
@@ -239,10 +247,7 @@ class Expenses(commands.Cog):
             return
 
         members = {m["member_id"]: m["display_name"] for m in database.list_members(self.bot.db, house["house_id"])}
-        lines = [
-            f"{members.get(ower_id, ower_id)} owes {members.get(owee_id, owee_id)} ${cents / 100:.2f}"
-            for (ower_id, owee_id), cents in net.items()
-        ]
+        lines = format_net_balances(net, members)
         await interaction.response.send_message("\n".join(lines))
 
 

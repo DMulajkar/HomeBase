@@ -204,6 +204,11 @@ The scheduler checks every 15 minutes and posts once per day, at **09:00 UTC**:
 - **Fixed bills** → `#rent-and-utilities`: each fixed bill posts itself (creates
   the split expense) on its due day. Variable bills are never auto-posted —
   post them with `/bill-post`.
+- **Due-date reminders** → `#rent-and-utilities`: a daily heads-up listing bills
+  coming due within the next 3 days (and not yet posted this month), so you can
+  move money ahead of time. Variable bills include a `/bill-post` nudge.
+- **Monthly financial summary** → `#rent-and-utilities`: on the 1st of each
+  month, a report of outstanding balances (who owes whom).
 
 These require the matching channel to exist under the **HomeBase** category
 (created by `/house-setup` or `/setup-channels`).

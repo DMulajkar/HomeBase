@@ -25,6 +25,8 @@ class ScheduledJob:
 JOBS = [
     ScheduledJob(key="chores-reminder", channel="chores", render=chores.render_chores_reminder),
     ScheduledJob(key="fixed-bills", channel="rent-and-utilities", render=finance.render_due_fixed_bills),
+    ScheduledJob(key="bills-due-reminder", channel="rent-and-utilities", render=finance.render_upcoming_bills),
+    ScheduledJob(key="monthly-summary", channel="rent-and-utilities", render=finance.render_monthly_summary),
 ]
 
 

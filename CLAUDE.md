@@ -67,8 +67,8 @@ Purpose: the bot always knows who owes money, who is owed, current balances, and
 - [x] Add `rent-and-utilities` to the channel catalog
 - [x] Recurring **bills**: rent, utilities, internet, shared subscriptions (`cogs/finance.py`; fixed vs variable kind, fixed payer per bill, equal split, monthly cadence). Spec: `docs/superpowers/specs/2026-06-17-recurring-bills-slice-1-design.md`.
 - [x] `/bill-add`, `/bills`, `/bill-post`, `/bill-remove` commands; fixed bills auto-post on their due day via the scheduler; reuse `/pay` and `/balances`. (Supersedes the literal `/rent`/`/utilities` names — those would be aliases.)
-- [ ] Due-date reminders (auto-post)
-- [ ] Monthly financial summary / report (auto-post): outstanding balances, who owes whom
+- [x] Due-date reminders (auto-post): daily heads-up of bills due within 3 days (`render_upcoming_bills`). Spec: `docs/superpowers/specs/2026-06-17-finance-autoposts-slice-design.md`.
+- [x] Monthly financial summary / report (auto-post): outstanding balances, who owes whom (`render_monthly_summary`, posts on the 1st). Same spec.
 - [ ] Payment confirmations (auto-post)
 
 ### Phase 2 — Chores system (`#chores`)
