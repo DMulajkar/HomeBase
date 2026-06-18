@@ -9,6 +9,7 @@ from discord.ext import commands
 
 import database
 from cogs import channels
+from cogs.settings import get_setting as _get_setting
 from cogs.vacation import active_member_ids as _active_member_ids
 
 CADENCES = ("daily", "weekly", "monthly")
@@ -358,7 +359,8 @@ def render_rankings(conn: sqlite3.Connection, house_id: int, today: date) -> Opt
     the summarized month (nothing to celebrate). Streaks count consecutive months
     ending at the summarized month.
     """
-    if not is_rankings_day(today, RANKINGS_DAY):
+    rankings_day = int(_get_setting(conn, house_id, "summary_day", str(RANKINGS_DAY)))
+    if not is_rankings_day(today, rankings_day):
         return None
     year, month = previous_month(today)
     counts = completion_counts_for_month(conn, house_id, year, month)

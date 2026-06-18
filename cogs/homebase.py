@@ -10,6 +10,7 @@ import database
 from cogs.chores import current_period_index, get_completion, list_chores
 from cogs.finance import REMINDER_LEAD_DAYS, days_until_due, is_posted, list_bills, period_key
 from cogs.groceries import list_needed
+from cogs.settings import get_setting as _get_setting
 
 
 # --- Layer 1: pure functions (no I/O, unit-tested) ---
@@ -84,6 +85,7 @@ def gather_status(conn: sqlite3.Connection, house_id: int, today: date) -> dict:
     urgent_bill_name: Optional[str] = None
     urgent_bill_days: Optional[int] = None  # None = overdue, int = days until due
 
+    lead_days = int(_get_setting(conn, house_id, "reminder_lead_days", str(REMINDER_LEAD_DAYS)))
     for bill in list_bills(conn, house_id):
         if is_posted(conn, bill["bill_id"], period):
             continue
@@ -93,7 +95,7 @@ def gather_status(conn: sqlite3.Connection, house_id: int, today: date) -> dict:
             if urgent_bill_name is None:
                 urgent_bill_name = bill["name"]
                 urgent_bill_days = None
-        elif days <= REMINDER_LEAD_DAYS:
+        elif days <= lead_days:
             bills_due_soon += 1
             if urgent_bill_name is None or (
                 urgent_bill_days is not None and days < urgent_bill_days

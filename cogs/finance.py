@@ -9,6 +9,7 @@ from discord.ext import commands
 
 import database
 from cogs import expenses
+from cogs.settings import get_setting as _get_setting
 from cogs.vacation import active_member_ids as _active_member_ids
 
 KINDS = ("fixed", "variable")
@@ -256,7 +257,8 @@ def render_upcoming_bills(conn: sqlite3.Connection, house_id: int, today: date) 
         if is_posted(conn, bill["bill_id"], period):
             continue
         days = days_until_due(today, bill["due_day"])
-        if days is None or days > REMINDER_LEAD_DAYS:
+        lead_days = int(_get_setting(conn, house_id, "reminder_lead_days", str(REMINDER_LEAD_DAYS)))
+        if days is None or days > lead_days:
             continue
         when = "today" if days == 0 else f"in {days} day{'s' if days != 1 else ''}"
         amount = f"${bill['amount_cents'] / 100:.2f}" if bill["amount_cents"] is not None else "varies"
@@ -276,7 +278,8 @@ def render_monthly_summary(conn: sqlite3.Connection, house_id: int, today: date)
     posts it once a month). Balances are cumulative all-time net, so the report
     is labelled "as of <date>" rather than scoped to one month.
     """
-    if not is_summary_day(today, SUMMARY_DAY):
+    summary_day = int(_get_setting(conn, house_id, "summary_day", str(SUMMARY_DAY)))
+    if not is_summary_day(today, summary_day):
         return None
     members = database.list_members(conn, house_id)
     if not members:

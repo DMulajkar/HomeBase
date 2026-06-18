@@ -27,6 +27,7 @@ class HomeBaseBot(commands.Bot):
         await self.load_extension("cogs.channels")
         await self.load_extension("cogs.birthdays")
         await self.load_extension("cogs.vacation")
+        await self.load_extension("cogs.settings")
         await self.load_extension("cogs.core")
         await self.load_extension("cogs.expenses")
         await self.load_extension("cogs.chores")
