@@ -69,7 +69,23 @@ python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().
 
 Without `SUBSCRIPTION_KEY`, the `/sub-add` and `/sub-password` commands are disabled (everything else works fine).
 
-**Required Discord permissions**: View Channels, Send Messages, Embed Links, Manage Channels.
+## Discord permissions
+
+The bot needs these permissions to function. Assign them to the bot's role in your Discord server:
+
+| Permission | Why |
+|---|---|
+| **View Channels** | Read and access channels to see where commands are run |
+| **Send Messages** | Post command responses, confirmations, and auto-posts (daily reminders, bill posts, etc.) |
+| **Embed Links** | Send rich-formatted messages (embeds used for balances, chores, leaderboards, etc.) |
+| **Manage Channels** | Create the HomeBase category and channels when you run `/house-setup` or `/setup-channels` |
+| **Use Slash Commands** | Respond to `/` commands (usually enabled by default) |
+
+**To set up permissions:**
+1. Go to **Server Settings → Roles**
+2. Find or create the bot's role
+3. Under **Permissions**, enable: View Channels, Send Messages, Embed Links, Manage Channels
+4. Make sure the bot's role is assigned to the bot user
 
 ## Running locally
 

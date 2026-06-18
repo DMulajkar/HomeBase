@@ -8,7 +8,10 @@
       "PowerShell(py *)",
       "Bash(py --version)",
       "Bash(git commit *)",
-      "Bash(py -m pytest tests/test_database.py -v)"
+      "Bash(py -m pytest tests/test_database.py -v)",
+      "Skill(run)",
+      "PowerShell(Stop-Process *)",
+      "Bash(pkill -f \"py bot.py\")"
     ]
   }
 }
