@@ -31,7 +31,7 @@ nagging.
 - **Channels** — an interactive picker that creates the house's Discord
   channels (`#chores`, `#rent-and-utilities`, `#groceries`, and more).
 
-Everything runs on slash commands.
+Everything runs on slash commands. Run `/homebase` for a single at-a-glance summary of the whole house.
 
 ## Setup
 
@@ -92,6 +92,30 @@ After that, use the commands below.
 ---
 
 ## Command reference
+
+### `/homebase`
+
+A single at-a-glance summary of the whole house:
+
+```
+HomeBase
+
+Bills due:        2
+Chores pending:   3
+Groceries needed: 8
+
+House health: 85/100
+
+Top priority: Electric bill is due in 2 days.
+```
+
+- **Bills due** — bills not yet posted that are overdue or due within the next 3 days.
+- **Chores pending** — chores not yet completed for the current period.
+- **Groceries needed** — items on the active grocery list.
+- **House health** — a 0–100 score. Deducts 15 pts per overdue bill, 5 pts per bill due soon, and 3 pts per pending chore.
+- **Top priority** — the single most urgent thing: overdue bills first, then upcoming bills, then pending chores, then a long grocery list.
+
+---
 
 ### House & members
 
@@ -520,6 +544,7 @@ cogs/
   birthdays.py     # /birthday-set, /birthdays; birthday prompt on /join-house
   wiki.py          # /wiki-set, /wiki, /wiki-list, /wiki-remove
   suggestions.py   # /suggestion (anonymous)
+  homebase.py      # /homebase — house-wide status dashboard
   scheduler.py     # the daily auto-post loop
 docs/superpowers/specs/   # design docs for each feature
 tests/             # unit tests (pure + DB layers)

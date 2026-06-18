@@ -126,21 +126,7 @@ Purpose: the smaller quality-of-life systems that reduce roommate friction and k
 
 Purpose: one command that rolls up the state of every other system. Depends on Phases 1–4 being in place (it reads from them; it owns no new domain data).
 
-- [ ] **`/homebase`** — a single at-a-glance status report aggregating across cogs. Example:
-
-  ```
-  🏠 HOMEBASE
-
-  Bills Due:          2
-  Chores Due:         4
-  Groceries Needed:   8
-  Maintenance Issues: 1
-  House Health:       92/100
-
-  Top Priority: Pay electric bill by Thursday.
-  ```
-
-  Keep the aggregation/scoring (e.g. "house health", "top priority") as pure functions (layer 1) fed by each cog's existing read functions, so it is unit-testable without Discord.
+- [x] **`/homebase`** (`cogs/homebase.py`) — single at-a-glance status: bills due, chores pending, groceries needed, house health score (0–100), and a one-line top priority. Reads from chores/finance/groceries tables via their existing pure/DB functions; owns no tables of its own. Pure `compute_house_health`, `top_priority`, `format_homebase`; DB `gather_status`.
 
 ### Settings & configuration (cross-cutting)
 
