@@ -9,6 +9,7 @@ from discord.ext import commands
 
 import database
 from cogs import channels
+from cogs.vacation import active_member_ids as _active_member_ids
 
 CADENCES = ("daily", "weekly", "monthly")
 RANKINGS_DAY = 1  # day of the month to post the previous month's chore rankings
@@ -336,7 +337,8 @@ def render_chores_reminder(conn: sqlite3.Connection, house_id: int, today: date)
     if not house_chores:
         return None
     members = database.list_members(conn, house_id)
-    member_ids = [m["member_id"] for m in members]
+    active = _active_member_ids(conn, house_id, today)
+    member_ids = [m["member_id"] for m in members if m["member_id"] in active]
     names = {m["member_id"]: m["display_name"] for m in members}
 
     lines = ["🧹 **Daily chore reminder**"]
@@ -437,9 +439,10 @@ class Chores(commands.Cog):
             return
 
         members = database.list_members(self.bot.db, house["house_id"])
-        member_ids = [m["member_id"] for m in members]
-        names = {m["member_id"]: m["display_name"] for m in members}
         today = datetime.now(timezone.utc).date()
+        active = _active_member_ids(self.bot.db, house["house_id"], today)
+        member_ids = [m["member_id"] for m in members if m["member_id"] in active]
+        names = {m["member_id"]: m["display_name"] for m in members}
 
         lines = ["**House chores**"]
         for c in house_chores:

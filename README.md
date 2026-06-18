@@ -21,6 +21,8 @@ nagging.
   and passwords are always shown privately (ephemeral).
 - **House wiki** — a shared reference for anything the house needs to remember:
   Wi-Fi password, landlord contact, lease info, parking rules, etc.
+- **Vacation mode** — mark a member as away; they're skipped in the chore
+  rotation and excluded from bill splits until they return.
 - **Birthdays** — store each roommate's birthday (month and day only); the bot
   auto-posts a reminder to `#events` on the day. Prompted automatically when
   someone runs `/join-house`.
@@ -396,6 +398,25 @@ Show every entry grouped by category.
 Delete an entry.
 - `key` — which entry to remove.
 
+### Vacation mode
+
+When a member goes on vacation, they're removed from the chore rotation and
+excluded from bill splits until they return. The rotation adjusts automatically
+— it only includes members who are currently active.
+
+#### `/vacation-start`
+Put yourself in vacation mode.
+- `end` *(optional)* — return date in `YYYY-MM-DD`. Leave blank for open-ended.
+
+#### `/vacation-end`
+End your vacation and return to the normal rotation and bill splits.
+- No arguments.
+
+#### `/vacations`
+Show all members currently on vacation with their start date and scheduled
+return (if set).
+- No arguments.
+
 ### Birthdays
 
 #### `/birthday-set`
@@ -412,6 +433,8 @@ someone's birthday. Members who haven't added their birthday won't appear.
 
 When you run `/join-house`, the bot will ask if you want to add your birthday
 right then. You can always add or update it later with `/birthday-set`.
+
+Birthday reminders post to `#general`.
 
 ### Anonymous suggestions
 
@@ -463,7 +486,7 @@ The scheduler checks every 15 minutes and posts once per day, at **09:00 UTC**:
 - **Monthly grocery spending report** → `#groceries`: on the 1st of each month,
   a summary of last month's total grocery spend and a per-member breakdown of
   who did shopping runs.
-- **Birthday reminders** → `#events`: on the morning of a member's birthday, a
+- **Birthday reminders** → `#general`: on the morning of a member's birthday, a
   message calling out their name. Only members who have added a birthday appear.
 
 These require the matching channel to exist under the **HomeBase** category
@@ -493,6 +516,7 @@ cogs/
   groceries.py     # /grocery-add, /groceries, /grocery-bought, /grocery-remove, /grocery-done
   leaderboard.py   # /leaderboard; monthly cross-system rankings auto-post
   meals.py         # /propose, /meal-vote, /meal-results, /meal-close
+  vacation.py      # /vacation-start, /vacation-end, /vacations
   birthdays.py     # /birthday-set, /birthdays; birthday prompt on /join-house
   wiki.py          # /wiki-set, /wiki, /wiki-list, /wiki-remove
   suggestions.py   # /suggestion (anonymous)

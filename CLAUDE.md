@@ -118,7 +118,7 @@ Purpose: the smaller quality-of-life systems that reduce roommate friction and k
   3. Ryan
   ```
 
-- [ ] **Vacation mode** — temporarily remove someone from the chore rotation, recalculate bill splits to exclude them for the period, and pause their reminders; restore on return.
+- [x] **Vacation mode** (`cogs/vacation.py`) — `/vacation-start [member] [end]`, `/vacation-end [member]`, `/vacations`. Active vacationers are excluded from chore rotation (in `render_chores_reminder` and `/chores`) and from bill splits (in `render_due_fixed_bills` and `/bill-post`). `active_member_ids(conn, house_id, today)` is the shared cross-cog helper imported by chores and finance; it self-initializes its table so it's safe to call from tests that don't set up the vacation cog explicitly.
 - [x] **Roommate birthdays** (`cogs/birthdays.py`) — `/birthday-set` (opens a modal), `/birthdays` (list all); birthday prompt offered as an ephemeral followup after `/join-house`. Daily auto-post to `#events` when it's someone's birthday (`render_birthday_reminder`). Stores month+day only (no year). Pure `parse_birthday` (multi-format), `format_birthday_list`, `month_day_label`; DB `member_birthdays` keyed by `member_id`.
 - [x] **Anonymous suggestions** (`cogs/suggestions.py`) — `/suggestion text` posts the text to `#suggestions` without attribution; user gets an ephemeral confirmation only. Member ID stored in DB for moderation but never shown. Pure `format_suggestion(text, number)`; DB `record_suggestion` / `suggestion_count`.
 

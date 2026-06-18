@@ -29,7 +29,7 @@ JOBS = [
     ScheduledJob(key="monthly-summary", channel="rent-and-utilities", render=finance.render_monthly_summary),
     ScheduledJob(key="grocery-spending", channel="groceries", render=groceries.render_spending_report),
     ScheduledJob(key="leaderboard", channel="chores", render=leaderboard.render_monthly_leaderboard),
-    ScheduledJob(key="birthday-reminder", channel="events", render=birthdays.render_birthday_reminder),
+    ScheduledJob(key="birthday-reminder", channel="general", render=birthdays.render_birthday_reminder),
 ]
 
 

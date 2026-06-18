@@ -9,6 +9,7 @@ from discord.ext import commands
 
 import database
 from cogs import expenses
+from cogs.vacation import active_member_ids as _active_member_ids
 
 KINDS = ("fixed", "variable")
 REMINDER_LEAD_DAYS = 3  # days before a bill's due date to start reminding
@@ -208,7 +209,8 @@ def render_due_fixed_bills(conn: sqlite3.Connection, house_id: int, today: date)
     announcement text, or None when nothing is due.
     """
     members = database.list_members(conn, house_id)
-    member_ids = [m["member_id"] for m in members]
+    active = _active_member_ids(conn, house_id, today)
+    member_ids = [m["member_id"] for m in members if m["member_id"] in active]
     if not member_ids:
         return None
     names = {m["member_id"]: m["display_name"] for m in members}
@@ -431,8 +433,10 @@ class Finance(commands.Cog):
             return
 
         members = database.list_members(self.bot.db, house["house_id"])
-        member_ids = [m["member_id"] for m in members]
-        period = period_key(date.today())
+        today = date.today()
+        active = _active_member_ids(self.bot.db, house["house_id"], today)
+        member_ids = [m["member_id"] for m in members if m["member_id"] in active]
+        period = period_key(today)
         try:
             record_posting(self.bot.db, bill, period, amount_cents, member_ids)
         except ValueError as e:
@@ -444,7 +448,7 @@ class Finance(commands.Cog):
         )
         await interaction.response.send_message(
             f"Posted **{name}** for {period}: ${amount_cents / 100:.2f}, paid by {payer}, "
-            f"split across {len(member_ids)} member(s)."
+            f"split across {len(member_ids)} active member(s)."
         )
 
     @app_commands.command(name="bill-remove", description="Delete a recurring bill definition")
