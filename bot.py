@@ -25,10 +25,20 @@ class HomeBaseBot(commands.Bot):
 
     async def setup_hook(self):
         await self.load_extension("cogs.channels")
+        await self.load_extension("cogs.birthdays")
+        await self.load_extension("cogs.vacation")
+        await self.load_extension("cogs.settings")
         await self.load_extension("cogs.core")
         await self.load_extension("cogs.expenses")
         await self.load_extension("cogs.chores")
         await self.load_extension("cogs.finance")
+        await self.load_extension("cogs.groceries")
+        await self.load_extension("cogs.leaderboard")
+        await self.load_extension("cogs.meals")
+        await self.load_extension("cogs.subscriptions")
+        await self.load_extension("cogs.wiki")
+        await self.load_extension("cogs.suggestions")
+        await self.load_extension("cogs.homebase")
         await self.load_extension("cogs.scheduler")
         # GUILD_ID set -> instant sync to that one server (use during development).
         # Unset -> global sync, which can take up to ~an hour to appear in Discord.

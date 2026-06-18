@@ -1,0 +1,96 @@
+Business Source License 1.1
+
+Parameters
+
+Licensor: Dhruv Mulajkar
+Licensed Work: HomeBase
+Full name of Licensed Work: HomeBase Discord Bot
+Change Date: 2027-06-18
+Change License: MIT
+
+For information about alternative licensing arrangements for the Licensed Work,
+please contact the Licensor.
+
+Notice
+
+Business Source License 1.1
+
+Terms
+
+The Licensor hereby grants you the right to copy, modify, create derivative
+works, and distribute the Licensed Work. Conditions of this license are below.
+
+For clarity, the Licensed Work includes each file in this repository marked
+with the following header:
+
+    SPDX-License-Identifier: BSL-1.1
+
+Distribution
+
+You may distribute the Licensed Work (and any work "Derived" from the Licensed
+Work) provided that you meet the following conditions:
+
+(a) You must include in the "display" of each Derived Work, and on any related
+documentation, notice that the Licensed Work is provided under this Business
+Source License and may be used for non-production purposes only, unless You have
+received an explicit license from the Licensor to use it otherwise. The notice
+must be in the form specified in Exhibit A.
+
+(b) You may not use the Licensed Work for a Competitive Purpose, by which we
+mean any use by a legal entity to offer products or services that compete,
+in substance or in the same market category, with the Licensed Work or with
+any products or services that the Licensor uses the Licensed Work to provide.
+
+(c) If the Licensed Work includes "change date" information associated with a
+work, that work will be released under an "Open Source License" (as defined
+below) on the Change Date. "Open Source License" means an open source license
+which is OSI approved and which includes a provision that permits the work to
+be used for purposes other than to offer services to others on a time-sharing
+basis.
+
+Reserved Rights
+
+The Licensor reserves all rights not expressly granted in these terms.
+
+Conditions
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above license notice, this
+   list of conditions, and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above license notice, this
+   list of conditions, and the following disclaimer in the documentation and/or
+   other materials provided with the distribution.
+
+3. Neither the name of the Licensor nor the names of any contributors may be
+   used to endorse or promote products derived from this Licensed Work without
+   specific prior written permission from the Licensor.
+
+4. You agree that you will not use the Licensed Work for any unlawful purpose
+   or in violation of any applicable laws or regulations.
+
+5. The Licensed Work is provided on an "AS IS" basis, without warranties or
+   conditions of any kind, either express or implied, including, without
+   limitation, any warranties or conditions of title, non-infringement,
+   merchantability, or fitness for a particular purpose.
+
+6. In no event and under no legal theory, whether in tort (including
+   negligence), contract, or otherwise, unless required by applicable law (such
+   as deliberate and grossly negligent acts) or agreed to in writing, shall any
+   Licensor be liable to you for damages, including any direct, indirect,
+   special, incidental, or consequential damages of any character arising as a
+   result of these License Terms or out of the use or inability to use the
+   Licensed Work (including but not limited to damages for loss of goodwill,
+   work stoppage, computer failure or malfunction, or any and all other
+   commercial damages or losses), even if such Licensor has been advised of the
+   possibility of such damages.
+
+Exhibit A - Notice of Business Source License
+
+This file is subject to the Business Source License 1.1 that is bundled with
+this package in the file LICENSE.
+
+To view a copy of this Business Source License 1.1, visit
+https://mariadb.com/bsl11/

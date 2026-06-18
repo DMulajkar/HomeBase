@@ -7,7 +7,8 @@ from discord.ext import commands, tasks
 
 import database
 import scheduler
-from cogs import channels, chores, finance
+from cogs import birthdays, channels, chores, finance, groceries, leaderboard
+from cogs.settings import get_setting
 
 REMINDER_HOUR_UTC = 9
 CHECK_INTERVAL_MINUTES = 15
@@ -23,9 +24,13 @@ class ScheduledJob:
 # Auto-posts register here. Each runs once per UTC day at REMINDER_HOUR_UTC.
 JOBS = [
     ScheduledJob(key="chores-reminder", channel="chores", render=chores.render_chores_reminder),
+    ScheduledJob(key="chore-rankings", channel="chores", render=chores.render_rankings),
     ScheduledJob(key="fixed-bills", channel="rent-and-utilities", render=finance.render_due_fixed_bills),
     ScheduledJob(key="bills-due-reminder", channel="rent-and-utilities", render=finance.render_upcoming_bills),
     ScheduledJob(key="monthly-summary", channel="rent-and-utilities", render=finance.render_monthly_summary),
+    ScheduledJob(key="grocery-spending", channel="groceries", render=groceries.render_spending_report),
+    ScheduledJob(key="leaderboard", channel="chores", render=leaderboard.render_monthly_leaderboard),
+    ScheduledJob(key="birthday-reminder", channel="general", render=birthdays.render_birthday_reminder),
 ]
 
 
@@ -49,8 +54,11 @@ class Scheduler(commands.Cog):
                 await self._run_job(house, guild, job, now)
 
     async def _run_job(self, house, guild: discord.Guild, job: ScheduledJob, now: datetime):
+        reminder_hour = int(get_setting(self.bot.db, house["house_id"], "reminder_hour", str(REMINDER_HOUR_UTC)))
         last_run = scheduler.get_last_run_date(self.bot.db, house["house_id"], job.key)
-        if not scheduler.is_due(now, last_run, REMINDER_HOUR_UTC):
+        if not scheduler.is_due(now, last_run, reminder_hour):
+            return
+        if get_setting(self.bot.db, house["house_id"], f"post.{job.key}", "on") != "on":
             return
         # Resolve inside the HomeBase category only, so a like-named channel
         # elsewhere in the server never receives the post.

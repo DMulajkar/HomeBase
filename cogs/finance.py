@@ -9,6 +9,8 @@ from discord.ext import commands
 
 import database
 from cogs import expenses
+from cogs.settings import get_setting as _get_setting
+from cogs.vacation import active_member_ids as _active_member_ids
 
 KINDS = ("fixed", "variable")
 REMINDER_LEAD_DAYS = 3  # days before a bill's due date to start reminding
@@ -208,7 +210,8 @@ def render_due_fixed_bills(conn: sqlite3.Connection, house_id: int, today: date)
     announcement text, or None when nothing is due.
     """
     members = database.list_members(conn, house_id)
-    member_ids = [m["member_id"] for m in members]
+    active = _active_member_ids(conn, house_id, today)
+    member_ids = [m["member_id"] for m in members if m["member_id"] in active]
     if not member_ids:
         return None
     names = {m["member_id"]: m["display_name"] for m in members}
@@ -254,7 +257,8 @@ def render_upcoming_bills(conn: sqlite3.Connection, house_id: int, today: date) 
         if is_posted(conn, bill["bill_id"], period):
             continue
         days = days_until_due(today, bill["due_day"])
-        if days is None or days > REMINDER_LEAD_DAYS:
+        lead_days = int(_get_setting(conn, house_id, "reminder_lead_days", str(REMINDER_LEAD_DAYS)))
+        if days is None or days > lead_days:
             continue
         when = "today" if days == 0 else f"in {days} day{'s' if days != 1 else ''}"
         amount = f"${bill['amount_cents'] / 100:.2f}" if bill["amount_cents"] is not None else "varies"
@@ -274,7 +278,8 @@ def render_monthly_summary(conn: sqlite3.Connection, house_id: int, today: date)
     posts it once a month). Balances are cumulative all-time net, so the report
     is labelled "as of <date>" rather than scoped to one month.
     """
-    if not is_summary_day(today, SUMMARY_DAY):
+    summary_day = int(_get_setting(conn, house_id, "summary_day", str(SUMMARY_DAY)))
+    if not is_summary_day(today, summary_day):
         return None
     members = database.list_members(conn, house_id)
     if not members:
@@ -431,8 +436,10 @@ class Finance(commands.Cog):
             return
 
         members = database.list_members(self.bot.db, house["house_id"])
-        member_ids = [m["member_id"] for m in members]
-        period = period_key(date.today())
+        today = date.today()
+        active = _active_member_ids(self.bot.db, house["house_id"], today)
+        member_ids = [m["member_id"] for m in members if m["member_id"] in active]
+        period = period_key(today)
         try:
             record_posting(self.bot.db, bill, period, amount_cents, member_ids)
         except ValueError as e:
@@ -444,7 +451,7 @@ class Finance(commands.Cog):
         )
         await interaction.response.send_message(
             f"Posted **{name}** for {period}: ${amount_cents / 100:.2f}, paid by {payer}, "
-            f"split across {len(member_ids)} member(s)."
+            f"split across {len(member_ids)} active member(s)."
         )
 
     @app_commands.command(name="bill-remove", description="Delete a recurring bill definition")
