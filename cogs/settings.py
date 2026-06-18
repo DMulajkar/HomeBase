@@ -117,28 +117,32 @@ def validate_setting(key: str, raw_value: str) -> str:
     return value
 
 
-def format_settings(current: dict[str, str]) -> str:
-    """Render all settings with their current value (or default if not set)."""
-    lines = ["**House settings**", ""]
+def build_settings_embed(current: dict[str, str]) -> discord.Embed:
+    """Build a settings embed with current values (or defaults where unset)."""
     numeric_keys = ["reminder_hour", "reminder_lead_days", "summary_day"]
     toggle_keys = [k for k in SETTINGS if k.startswith("post.")]
 
-    lines.append("*Scheduling*")
+    embed = discord.Embed(title="House Settings", color=discord.Color.blurple())
+
+    scheduling_lines = []
     for key in numeric_keys:
         defn = SETTINGS[key]
         value = current.get(key, defn.default)
-        tag = "" if key in current else " (default)"
-        lines.append(f"  {key}: {value}{tag}")
+        tag = "" if key in current else " *(default)*"
+        scheduling_lines.append(f"`{key}`: **{value}**{tag}\n{defn.description}")
+    embed.add_field(name="Scheduling", value="\n\n".join(scheduling_lines), inline=False)
 
-    lines.append("")
-    lines.append("*Auto-post toggles*")
+    toggle_lines = []
     for key in toggle_keys:
         defn = SETTINGS[key]
         value = current.get(key, defn.default)
-        tag = "" if key in current else " (default)"
-        lines.append(f"  {key}: {value}{tag}")
+        icon = "on" if value == "on" else "off"
+        tag = "" if key in current else " *(default)*"
+        toggle_lines.append(f"`{key}`: **{icon}**{tag}")
+    embed.add_field(name="Auto-post Toggles", value="\n".join(toggle_lines), inline=False)
 
-    return "\n".join(lines)
+    embed.set_footer(text="Use /set <key> <value> to change any setting.")
+    return embed
 
 
 # --- Layer 2: DB access (conn first arg, unit-tested) ---
@@ -241,7 +245,7 @@ class Settings(commands.Cog):
             return
         house, _ = result
         current = get_all_settings(self.bot.db, house["house_id"])
-        await interaction.response.send_message(format_settings(current))
+        await interaction.response.send_message(embed=build_settings_embed(current), ephemeral=True)
 
     @app_commands.command(name="set", description="Change a house setting")
     @app_commands.describe(
@@ -280,7 +284,7 @@ class Settings(commands.Cog):
         set_setting(self.bot.db, house["house_id"], key, normalized)
         defn = SETTINGS[key]
         await interaction.response.send_message(
-            f"Set **{key}** to `{normalized}`. {defn.description}."
+            f"Set **{key}** to `{normalized}`. {defn.description}.", ephemeral=True
         )
 
 

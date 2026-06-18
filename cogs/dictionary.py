@@ -102,16 +102,62 @@ COMMAND_CATEGORIES: list[tuple[str, list[CommandEntry]]] = [
 ]
 
 
-def build_dictionary_embeds() -> list[discord.Embed]:
-    embeds = []
-    for category, entries in COMMAND_CATEGORIES:
-        embed = discord.Embed(title=category, color=discord.Color.blurple())
-        lines = "\n".join(f"`{e.name}` — {e.description}" for e in entries)
-        embed.description = lines
-        embeds.append(embed)
-    embeds[0].title = "Command Dictionary — " + embeds[0].title
-    embeds[-1].set_footer(text=f"{sum(len(e) for _, e in COMMAND_CATEGORIES)} commands total")
-    return embeds
+def build_category_embed(index: int) -> discord.Embed:
+    category, entries = COMMAND_CATEGORIES[index]
+    total = len(COMMAND_CATEGORIES)
+    embed = discord.Embed(
+        title=f"Command Dictionary — {category}",
+        description="\n".join(f"`{e.name}` — {e.description}" for e in entries),
+        color=discord.Color.blurple(),
+    )
+    embed.set_footer(text=f"Category {index + 1} of {total}  •  {sum(len(e) for _, e in COMMAND_CATEGORIES)} commands total")
+    return embed
+
+
+class DictionaryView(discord.ui.View):
+    def __init__(self, index: int = 0):
+        super().__init__(timeout=300)
+        self.index = index
+        self._add_select()
+        self._refresh_buttons()
+
+    def _add_select(self):
+        options = [
+            discord.SelectOption(label=cat, value=str(i), default=(i == self.index))
+            for i, (cat, _) in enumerate(COMMAND_CATEGORIES)
+        ]
+        select = discord.ui.Select(placeholder="Jump to a category…", options=options)
+        select.callback = self._select_callback
+        self.add_item(select)
+
+    async def _select_callback(self, interaction: discord.Interaction):
+        self.index = int(interaction.data["values"][0])
+        self._rebuild()
+        await interaction.response.edit_message(embed=build_category_embed(self.index), view=self)
+
+    def _rebuild(self):
+        self.clear_items()
+        self._add_select()
+        self._refresh_buttons()
+
+    def _refresh_buttons(self):
+        prev = discord.ui.Button(label="← Prev", style=discord.ButtonStyle.secondary, disabled=(self.index == 0))
+        next_ = discord.ui.Button(label="Next →", style=discord.ButtonStyle.secondary, disabled=(self.index == len(COMMAND_CATEGORIES) - 1))
+
+        async def prev_cb(interaction: discord.Interaction):
+            self.index -= 1
+            self._rebuild()
+            await interaction.response.edit_message(embed=build_category_embed(self.index), view=self)
+
+        async def next_cb(interaction: discord.Interaction):
+            self.index += 1
+            self._rebuild()
+            await interaction.response.edit_message(embed=build_category_embed(self.index), view=self)
+
+        prev.callback = prev_cb
+        next_.callback = next_cb
+        self.add_item(prev)
+        self.add_item(next_)
 
 
 class Dictionary(commands.Cog):
@@ -129,7 +175,7 @@ class Dictionary(commands.Cog):
                 "This server doesn't have a house set up yet. Run /house-setup first.", ephemeral=True
             )
             return
-        await interaction.response.send_message(embeds=build_dictionary_embeds(), ephemeral=True)
+        await interaction.response.send_message(embed=build_category_embed(0), view=DictionaryView(), ephemeral=True)
 
 
 async def setup(bot: commands.Bot):

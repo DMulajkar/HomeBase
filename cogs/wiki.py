@@ -300,7 +300,7 @@ class Wiki(commands.Cog):
         created = set_entry(self.bot.db, house["house_id"], normalized, value, member["member_id"], category)
         verb = "Added" if created else "Updated"
         await interaction.response.send_message(
-            f"{verb} **{normalized}** under *{category}* in the house wiki."
+            f"{verb} **{normalized}** under *{category}* in the house wiki.", ephemeral=True
         )
         await _sync_wiki_channel(self.bot, interaction.guild, house["house_id"])
 

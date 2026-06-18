@@ -322,6 +322,7 @@ class Finance(commands.Cog):
             return
         house, _ = result
 
+        kind = kind.lower()
         if kind not in KINDS:
             await interaction.response.send_message(
                 "Kind must be `fixed` or `variable`.", ephemeral=True

@@ -101,9 +101,57 @@ class DeleteHouseConfirmView(discord.ui.View):
         await interaction.response.edit_message(content="Cancelled — nothing was deleted.", view=None)
 
 
+def build_welcome_dm(guild_name: str, rules: str | None) -> discord.Embed:
+    embed = discord.Embed(
+        title=f"Welcome to {guild_name}!",
+        description=(
+            "You've just joined a house managed by HomeBase. "
+            "Here's how to get started:"
+        ),
+        color=discord.Color.blurple(),
+    )
+    embed.add_field(
+        name="Step 1 — Join the house",
+        value="Run `/join-house` in the server. This adds you to expense splits, bill splits, and the chore rotation.",
+        inline=False,
+    )
+    embed.add_field(
+        name="Step 2 — Add your birthday (optional)",
+        value="Run `/birthday-set` to add your birthday. The house will be reminded on your day.",
+        inline=False,
+    )
+    embed.add_field(
+        name="Step 3 — Explore",
+        value="Run `/homebase` for a live snapshot of bills, chores, and groceries. Run `/dictionary` to see every available command.",
+        inline=False,
+    )
+    if rules:
+        embed.add_field(name="House Rules", value=rules, inline=False)
+    embed.set_footer(text="Questions? Ask your housemates or run /dictionary for the full command list.")
+    return embed
+
+
 class Core(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        house = database.get_house(self.bot.db, str(member.guild.id))
+        if house is None:
+            return
+        rules = None
+        try:
+            from cogs.wiki import get_entry
+            row = get_entry(self.bot.db, house["house_id"], "house rules")
+            if row and row["value"] != "(not set)":
+                rules = row["value"]
+        except Exception:
+            pass
+        try:
+            await member.send(embed=build_welcome_dm(member.guild.name, rules))
+        except discord.Forbidden:
+            pass
 
     @app_commands.command(name="house-setup", description="Set up this server as a house")
     async def house_setup(self, interaction: discord.Interaction):

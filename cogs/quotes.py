@@ -139,7 +139,7 @@ class Quotes(commands.Cog):
             return
         house, member = result
         quote_id = create_quote(self.bot.db, house["house_id"], member["member_id"], text)
-        await interaction.response.send_message(f"Quote saved as #{quote_id}.")
+        await interaction.response.send_message(f"Quote saved as #{quote_id}.", ephemeral=True)
 
     @app_commands.command(name="quotes", description="View all house quotes, or filter to one member")
     @app_commands.describe(member="Optional: show only quotes added by this member")
@@ -172,7 +172,7 @@ class Quotes(commands.Cog):
                 f"Quote #{quote_id} not found.", ephemeral=True
             )
             return
-        await interaction.response.send_message(f"Quote #{quote_id} deleted.")
+        await interaction.response.send_message(f"Quote #{quote_id} deleted.", ephemeral=True)
 
 
 async def setup(bot: commands.Bot):

@@ -316,6 +316,21 @@ def completion_months(conn: sqlite3.Connection, house_id: int) -> dict[int, set[
     return result
 
 
+def delete_chore(conn: sqlite3.Connection, house_id: int, name: str) -> bool:
+    """Delete a chore and all its completion/swap records. Returns False if not found."""
+    row = conn.execute(
+        "SELECT chore_id FROM chores WHERE house_id = ? AND name = ?", (house_id, name)
+    ).fetchone()
+    if row is None:
+        return False
+    chore_id = row["chore_id"]
+    conn.execute("DELETE FROM chore_completions WHERE chore_id = ?", (chore_id,))
+    conn.execute("DELETE FROM chore_swaps WHERE chore_id = ?", (chore_id,))
+    conn.execute("DELETE FROM chores WHERE chore_id = ?", (chore_id,))
+    conn.commit()
+    return True
+
+
 def current_assignee(
     conn: sqlite3.Connection, chore: sqlite3.Row, member_ids_ordered: list[int], today: date
 ) -> tuple[Optional[int], bool, bool, int]:
@@ -517,6 +532,19 @@ class Chores(commands.Cog):
         await interaction.response.send_message(
             f"'{name}' is now {member.display_name}'s for this period."
         )
+
+    @app_commands.command(name="chore-remove", description="Remove a chore from the rotation")
+    @app_commands.describe(name="Name of the chore to remove")
+    async def chore_remove(self, interaction: discord.Interaction, name: str):
+        result = await _get_house_and_member(self.bot, interaction)
+        if result is None:
+            return
+        house, _ = result
+        removed = delete_chore(self.bot.db, house["house_id"], name)
+        if not removed:
+            await interaction.response.send_message(f"No chore named '{name}'. See /chores.", ephemeral=True)
+            return
+        await interaction.response.send_message(f"Removed chore '{name}'.", ephemeral=True)
 
     @app_commands.command(name="chore-history", description="Show chore completion counts per member")
     async def chore_history(self, interaction: discord.Interaction):
