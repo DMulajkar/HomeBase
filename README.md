@@ -649,3 +649,11 @@ tests/             # unit tests (pure + DB layers)
 ```
 
 See `CLAUDE.md` for architecture details and the feature roadmap.
+
+## License
+
+This project is licensed under the **Business Source License 1.1** (BSL-1.1). You may use, modify, and distribute this software for non-production purposes. On **June 18, 2027**, this project will automatically convert to the MIT License.
+
+For a commercial license or other licensing inquiries, contact the Licensor.
+
+See the `LICENSE` file for full terms.
