@@ -38,6 +38,9 @@ class HomeBaseBot(commands.Bot):
         await self.load_extension("cogs.subscriptions")
         await self.load_extension("cogs.wiki")
         await self.load_extension("cogs.suggestions")
+        await self.load_extension("cogs.quotes")
+        await self.load_extension("cogs.milestones")
+        await self.load_extension("cogs.events")
         await self.load_extension("cogs.homebase")
         await self.load_extension("cogs.scheduler")
         # GUILD_ID set -> instant sync to that one server (use during development).

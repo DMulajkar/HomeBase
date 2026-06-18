@@ -55,6 +55,9 @@ def delete_house_data(conn: sqlite3.Connection, house_id: int) -> None:
     conn.execute("DELETE FROM meal_polls WHERE house_id = ?", (house_id,))
 
     # Other house-scoped tables
+    conn.execute("DELETE FROM quotes WHERE house_id = ?", (house_id,))
+    conn.execute("DELETE FROM milestones WHERE house_id = ?", (house_id,))
+    conn.execute("DELETE FROM calendar_events WHERE house_id = ?", (house_id,))
     conn.execute("DELETE FROM subscriptions WHERE house_id = ?", (house_id,))
     conn.execute("DELETE FROM suggestions WHERE house_id = ?", (house_id,))
     conn.execute("DELETE FROM vacations WHERE house_id = ?", (house_id,))

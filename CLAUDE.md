@@ -124,6 +124,46 @@ Features: `/homebase` dashboard. Single at-a-glance status: bills due, chores pe
 - **`/ledger`** (`cogs/expenses.py`) — shows every expense you were charged for (not paid by you), with description, date, payer name, and your share. Ephemeral. Pure `get_ledger_entries` + `format_ledger`.
 - **`/delete-house`** (`cogs/core.py`) — permanently deletes the house and all associated data (expenses, chores, bills, groceries, members, etc.). Admin-only (`manage_guild` permission); confirmation button required. Pure `delete_house_data` handles FK-safe deletion order.
 
+### Roommate Calendar — DONE
+
+Purpose: coordinate house events and get reminders on the day they happen.
+
+Planned features:
+- **`/event-add name date [time] [description]`** — create a house event (e.g., "Dinner with roommates", "House movie night"). Time is optional (defaults to all-day).
+- **`/events [month]`** — list all events for a month or show upcoming events.
+- **`/event-remove name`** — delete an event.
+- **Event reminders (auto-post)** — daily at `REMINDER_HOUR_UTC`, post to `#general` (or configurable channel) all events scheduled for that day. Example: "📅 Today: Dinner with roommates at 7pm, House cleaning day"
+- **`calendar_events` table**: `event_id`, `house_id`, `member_id` (creator), `name`, `date`, `time` (nullable), `description` (nullable), `created_at`. Event time can be stored as HH:MM (24h) or null for all-day.
+- Pure layer: `format_event`, `parse_event_date`, `render_daily_events`.
+- DB layer: `create_event`, `get_events_for_date`, `list_events_by_month`, `delete_event`.
+
+### Memory Quotes — DONE
+
+Purpose: preserve funny or memorable moments that happen in the house.
+
+Planned features:
+- **`/quote text`** — save a memorable quote or moment (e.g., "Sarah said: 'I thought the dish was oven-safe...'"). Stored with member ID (who submitted it), date, and the text.
+- **`/quotes [member]`** — view all quotes, optionally filtered by member who said it. Shows date submitted and who added it. Posts to `#memories`.
+- **`/quote-remove id`** — delete a quote (creator or admin).
+- **Random quote reminder (auto-post)** — weekly (configurable day) auto-post a random quote from the house history to `#memories`. Engages nostalgia.
+- **`quotes` table**: `quote_id`, `house_id`, `member_id` (who submitted it), `text`, `created_at`.
+- Pure layer: `format_quote`, `format_quotes_list`, `pick_random_quote`.
+- DB layer: `create_quote`, `list_quotes_by_member`, `get_random_quote`, `delete_quote`.
+
+### House Milestones — DONE
+
+Purpose: track and celebrate important house dates and member anniversaries.
+
+Planned features:
+- **`/milestone-add date name [description]`** — create a milestone (e.g., "House anniversary", "Sarah joined", "Apartment lease renewal"). Date format: YYYY-MM-DD.
+- **`/milestones`** — view all milestones, sorted by date, showing days until next occurrence (for anniversaries).
+- **`/milestone-remove name`** — delete a milestone.
+- **Member join date tracking** — automatically record when each member joins via `/join-house`; treated as a milestone so join anniversaries can be celebrated.
+- **Milestone reminders (auto-post)** — daily check for milestones on or within N days (configurable, e.g., 7 days). Post to `#memories`. Example: "🎉 Today is Sarah's 2-year house anniversary!" or "📅 House lease renewal is in 3 days."
+- **`milestones` table**: `milestone_id`, `house_id`, `date` (YYYY-MM-DD), `name`, `description` (nullable), `created_at`, `is_recurring` (boolean, for anniversaries).
+- Pure layer: `format_milestone`, `days_until_date`, `render_upcoming_milestones`.
+- DB layer: `create_milestone`, `list_milestones`, `get_milestones_near_date`, `delete_milestone`.
+
 ### Settings & configuration (planned, not yet implemented)
 
 Purpose: let each house tune the bot's behavior instead of relying on hardcoded constants. Today values like `REMINDER_HOUR_UTC`, `REMINDER_LEAD_DAYS`, and `SUMMARY_DAY` are module-level constants shared by every house; this feature will move per-house overrides into the DB.

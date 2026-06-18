@@ -7,7 +7,7 @@ from discord.ext import commands, tasks
 
 import database
 import scheduler
-from cogs import birthdays, channels, chores, finance, groceries, leaderboard
+from cogs import birthdays, channels, chores, events, finance, groceries, leaderboard, milestones, quotes
 from cogs.settings import get_setting
 
 REMINDER_HOUR_UTC = 9
@@ -31,6 +31,9 @@ JOBS = [
     ScheduledJob(key="grocery-spending", channel="groceries", render=groceries.render_spending_report),
     ScheduledJob(key="leaderboard", channel="chores", render=leaderboard.render_monthly_leaderboard),
     ScheduledJob(key="birthday-reminder", channel="general", render=birthdays.render_birthday_reminder),
+    ScheduledJob(key="weekly-quote", channel="memories", render=quotes.render_weekly_quote),
+    ScheduledJob(key="milestone-reminder", channel="memories", render=milestones.render_upcoming_milestones),
+    ScheduledJob(key="event-reminder", channel="general", render=events.render_daily_events),
 ]
 
 
