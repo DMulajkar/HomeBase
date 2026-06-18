@@ -42,38 +42,164 @@ CHANNEL_CATALOG = [
 ]
 
 
-def build_welcome_message(house_name: str) -> discord.Embed:
-    """Build the welcome embed posted into the #welcome channel.
+def build_welcome_message(house_name: str) -> list[discord.Embed]:
+    """Build the welcome embeds posted into the #welcome channel.
 
-    discord.Embed is a plain data object, so this is constructable and testable
-    without a live Discord connection.
+    Returns a list of embeds (sent together in one message) so each section
+    stays under Discord's per-embed character limits. Constructable and
+    testable without a live Discord connection.
     """
-    embed = discord.Embed(
-        title=f"Welcome to {house_name}! 🏠",
-        description="This is your house's home base. Here's everything you need to get started.",
+
+    # --- Embed 1: Welcome & getting started ---
+    welcome = discord.Embed(
+        title=f"Welcome to {house_name}",
+        description=(
+            "This is your house's home base. Everything the house needs — "
+            "expenses, chores, bills, groceries, and more — lives here.\n\n"
+            "**New to the house? Follow these steps:**"
+        ),
         color=discord.Color.blurple(),
     )
-    embed.add_field(
-        name="📜 House Rules",
-        value="✏️ *No rules yet — an admin can post the house rules in this channel and pin them.*",
-        inline=False,
-    )
-    embed.add_field(
-        name="🤖 Bot Setup",
-        value="New here? Run `/join-house` so you're included in expenses and everything else.",
-        inline=False,
-    )
-    embed.add_field(
-        name="⭐ Important Commands",
+    welcome.add_field(
+        name="Step 1 — Join the house",
         value=(
-            "`/expense` — add a shared expense, split equally\n"
-            "`/pay` — record paying someone back\n"
-            "`/balances` — see who owes whom\n"
-            "`/join-house` — join this house"
+            "Run `/join-house`. This adds you to expense splits, bill splits, "
+            "and the chore rotation. Everyone must do this."
         ),
         inline=False,
     )
-    return embed
+    welcome.add_field(
+        name="Step 2 — Add your birthday (optional)",
+        value=(
+            "The bot will prompt you right after `/join-house`. You can also "
+            "run `/birthday-set` any time. The house gets reminded on your day."
+        ),
+        inline=False,
+    )
+    welcome.add_field(
+        name="Step 3 — Use `/homebase` anytime",
+        value=(
+            "Run `/homebase` for a live snapshot: bills due, chores pending, "
+            "groceries needed, and a house health score."
+        ),
+        inline=False,
+    )
+    welcome.add_field(
+        name="House rules",
+        value="No rules set yet. An admin can pin the house rules in this channel.",
+        inline=False,
+    )
+    welcome.set_footer(text="Full command reference below.")
+
+    # --- Embed 2: Money ---
+    money = discord.Embed(
+        title="Money",
+        color=discord.Color.green(),
+    )
+    money.add_field(
+        name="Expenses",
+        value=(
+            "`/expense description amount` — log a shared expense; split equally across all members\n"
+            "`/expense description amount charge_to:@member` — charge the full amount to one person\n"
+            "`/pay to:@member amount` — record paying someone back\n"
+            "`/pay to:@member` — settle your full balance with them in one shot\n"
+            "`/balances` — see who owes whom across the whole house\n"
+            "`/ledger` — see every expense you've been charged for, with descriptions and dates"
+        ),
+        inline=False,
+    )
+    money.add_field(
+        name="Recurring Bills",
+        value=(
+            "`/bill-add name kind due_day payer amount` — define a recurring bill (fixed or variable)\n"
+            "`/bills` — list all bills and this month's posted/pending status\n"
+            "`/bill-post name amount` — post a variable bill (or override a fixed one)\n"
+            "`/bill-remove name` — remove a bill definition\n\n"
+            "*Fixed bills post themselves automatically on their due day.*"
+        ),
+        inline=False,
+    )
+
+    # --- Embed 3: Chores & Groceries ---
+    chores_groceries = discord.Embed(
+        title="Chores & Groceries",
+        color=discord.Color.orange(),
+    )
+    chores_groceries.add_field(
+        name="Chores",
+        value=(
+            "`/chore-add name cadence` — add a chore with daily / weekly / monthly rotation\n"
+            "`/chores` — view all chores, assignees, and due dates\n"
+            "`/complete name` — mark a chore done for this period\n"
+            "`/swap name member` — hand off this period's chore to someone else\n"
+            "`/chore-history` — see how many chores each member has completed\n"
+            "`/leaderboard` — monthly rankings combining chores and grocery runs"
+        ),
+        inline=False,
+    )
+    chores_groceries.add_field(
+        name="Groceries",
+        value=(
+            "`/grocery-add name category` — add an item (Food / Household Supplies / Cleaning Supplies)\n"
+            "`/groceries` — view the current list by category\n"
+            "`/grocery-bought name` — mark an item bought and remove it from the list\n"
+            "`/grocery-remove name` — remove an item without marking it bought\n"
+            "`/grocery-done amount` — end a shopping run: clears the list, records the expense"
+        ),
+        inline=False,
+    )
+
+    # --- Embed 4: House life ---
+    life = discord.Embed(
+        title="House Life",
+        color=discord.Color.purple(),
+    )
+    life.add_field(
+        name="Meal voting",
+        value=(
+            "`/meal-propose name` — propose a meal (starts a poll if none is open)\n"
+            "`/meal-vote name` — cast or change your vote\n"
+            "`/meal-results` — see current standings\n"
+            "`/meal-close` — close the poll and announce the winner"
+        ),
+        inline=False,
+    )
+    life.add_field(
+        name="Subscriptions",
+        value=(
+            "`/sub-add name email password` — save shared account credentials (password encrypted)\n"
+            "`/subs` — list subscriptions (names + emails only, no passwords)\n"
+            "`/sub-password name` — retrieve a password privately (only you see it)\n"
+            "`/sub-update name` — update email or password\n"
+            "`/sub-remove name` — delete a subscription"
+        ),
+        inline=False,
+    )
+    life.add_field(
+        name="House wiki",
+        value=(
+            "`/wiki-setup` — pre-populate 27 common entries as placeholders\n"
+            "`/wiki-set key value [category]` — add or update an entry\n"
+            "`/wiki key` — look up an entry\n"
+            "`/wiki-list` — view all entries grouped by category\n"
+            "`/wiki-remove key` — delete an entry"
+        ),
+        inline=False,
+    )
+    life.add_field(
+        name="Vacation, birthdays & suggestions",
+        value=(
+            "`/vacation-start [end]` — go on vacation (skipped in chores and bill splits)\n"
+            "`/vacation-end` — return from vacation\n"
+            "`/vacations` — see who's currently away\n"
+            "`/birthday-set` — set your birthday (month + day only)\n"
+            "`/birthdays` — see all house birthdays\n"
+            "`/suggestion text` — post anonymous feedback to #suggestions"
+        ),
+        inline=False,
+    )
+
+    return [welcome, money, chores_groceries, life]
 
 
 # --- Layer 3: Discord plumbing (not unit-tested, no live-client tests) ---
@@ -119,7 +245,7 @@ async def create_selected_channels(
         channel = await guild.create_text_channel(spec.name, category=category, topic=spec.topic)
         created.append(spec.name)
         if spec.welcome:
-            await channel.send(embed=build_welcome_message(house_name))
+            await channel.send(embeds=build_welcome_message(house_name))
 
     return created, skipped
 
@@ -213,6 +339,23 @@ class Channels(commands.Cog):
             "Pick the channels you'd like me to create, then press **Create channels**:",
             view=view,
         )
+
+
+    @app_commands.command(name="welcome", description="Re-post the welcome message and command cheat sheet")
+    @app_commands.default_permissions(manage_guild=True)
+    async def welcome(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            await interaction.response.send_message("This command must be used in a server.", ephemeral=True)
+            return
+        house = database.get_house(self.bot.db, str(interaction.guild_id))
+        if house is None:
+            await interaction.response.send_message(
+                "This server doesn't have a house set up yet. Run /house-setup first.", ephemeral=True
+            )
+            return
+        house_name = house["name"] or interaction.guild.name
+        await interaction.response.send_message("Posting welcome message...", ephemeral=True)
+        await interaction.channel.send(embeds=build_welcome_message(house_name))
 
 
 async def setup(bot: commands.Bot):

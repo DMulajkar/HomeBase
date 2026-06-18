@@ -1,3 +1,5 @@
+import sqlite3
+
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -5,6 +7,98 @@ from discord.ext import commands
 import database
 from cogs.birthdays import BirthdayPromptView
 from cogs.channels import ChannelSetupView
+
+
+def delete_house_data(conn: sqlite3.Connection, house_id: int) -> None:
+    """Delete all data for a house in FK-safe order."""
+    # Expenses
+    expense_ids = [r[0] for r in conn.execute(
+        "SELECT expense_id FROM expenses WHERE house_id = ?", (house_id,)
+    ).fetchall()]
+    if expense_ids:
+        conn.execute(f"DELETE FROM expense_splits WHERE expense_id IN ({','.join('?'*len(expense_ids))})", expense_ids)
+    conn.execute("DELETE FROM expenses WHERE house_id = ?", (house_id,))
+    conn.execute("DELETE FROM settlements WHERE house_id = ?", (house_id,))
+
+    # Chores
+    chore_ids = [r[0] for r in conn.execute(
+        "SELECT chore_id FROM chores WHERE house_id = ?", (house_id,)
+    ).fetchall()]
+    if chore_ids:
+        conn.execute(f"DELETE FROM chore_completions WHERE chore_id IN ({','.join('?'*len(chore_ids))})", chore_ids)
+        conn.execute(f"DELETE FROM chore_swaps WHERE chore_id IN ({','.join('?'*len(chore_ids))})", chore_ids)
+    conn.execute("DELETE FROM chores WHERE house_id = ?", (house_id,))
+
+    # Finance
+    bill_ids = [r[0] for r in conn.execute(
+        "SELECT bill_id FROM bills WHERE house_id = ?", (house_id,)
+    ).fetchall()]
+    if bill_ids:
+        conn.execute(f"DELETE FROM bill_postings WHERE bill_id IN ({','.join('?'*len(bill_ids))})", bill_ids)
+    conn.execute("DELETE FROM bills WHERE house_id = ?", (house_id,))
+
+    # Groceries
+    conn.execute("DELETE FROM grocery_runs WHERE house_id = ?", (house_id,))
+    conn.execute("DELETE FROM grocery_items WHERE house_id = ?", (house_id,))
+
+    # Meals
+    poll_ids = [r[0] for r in conn.execute(
+        "SELECT poll_id FROM meal_polls WHERE house_id = ?", (house_id,)
+    ).fetchall()]
+    if poll_ids:
+        option_ids = [r[0] for r in conn.execute(
+            f"SELECT option_id FROM meal_options WHERE poll_id IN ({','.join('?'*len(poll_ids))})", poll_ids
+        ).fetchall()]
+        if option_ids:
+            conn.execute(f"DELETE FROM meal_votes WHERE option_id IN ({','.join('?'*len(option_ids))})", option_ids)
+        conn.execute(f"DELETE FROM meal_options WHERE poll_id IN ({','.join('?'*len(poll_ids))})", poll_ids)
+    conn.execute("DELETE FROM meal_polls WHERE house_id = ?", (house_id,))
+
+    # Other house-scoped tables
+    conn.execute("DELETE FROM quotes WHERE house_id = ?", (house_id,))
+    conn.execute("DELETE FROM milestones WHERE house_id = ?", (house_id,))
+    conn.execute("DELETE FROM calendar_events WHERE house_id = ?", (house_id,))
+    conn.execute("DELETE FROM subscriptions WHERE house_id = ?", (house_id,))
+    conn.execute("DELETE FROM suggestions WHERE house_id = ?", (house_id,))
+    conn.execute("DELETE FROM vacations WHERE house_id = ?", (house_id,))
+    conn.execute("DELETE FROM wiki_state WHERE house_id = ?", (house_id,))
+    conn.execute("DELETE FROM wiki_entries WHERE house_id = ?", (house_id,))
+    conn.execute("DELETE FROM settings WHERE house_id = ?", (house_id,))
+    conn.execute("DELETE FROM schedule_state WHERE house_id = ?", (house_id,))
+
+    # Member-scoped tables (birthdays keyed by member_id)
+    member_ids = [r[0] for r in conn.execute(
+        "SELECT member_id FROM members WHERE house_id = ?", (house_id,)
+    ).fetchall()]
+    if member_ids:
+        conn.execute(f"DELETE FROM member_birthdays WHERE member_id IN ({','.join('?'*len(member_ids))})", member_ids)
+
+    # Members and house
+    conn.execute("DELETE FROM members WHERE house_id = ?", (house_id,))
+    conn.execute("DELETE FROM houses WHERE house_id = ?", (house_id,))
+    conn.commit()
+
+
+class DeleteHouseConfirmView(discord.ui.View):
+    def __init__(self, house_id: int, house_name: str, db: sqlite3.Connection):
+        super().__init__(timeout=60)
+        self.house_id = house_id
+        self.house_name = house_name
+        self.db = db
+
+    @discord.ui.button(label="Yes, delete everything", style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        delete_house_data(self.db, self.house_id)
+        self.stop()
+        await interaction.response.edit_message(
+            content=f"The house **{self.house_name}** and all its data have been permanently deleted.",
+            view=None,
+        )
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.stop()
+        await interaction.response.edit_message(content="Cancelled — nothing was deleted.", view=None)
 
 
 class Core(commands.Cog):
@@ -86,6 +180,28 @@ class Core(commands.Cog):
         )
         embed.set_footer(text="Listed in join order (also the chore rotation order).")
         await interaction.response.send_message(embed=embed)
+
+
+    @app_commands.command(name="delete-house", description="Permanently delete this house and all its data")
+    @app_commands.default_permissions(manage_guild=True)
+    async def delete_house(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            await interaction.response.send_message("This command must be used in a server.", ephemeral=True)
+            return
+
+        house = database.get_house(self.bot.db, str(interaction.guild_id))
+        if house is None:
+            await interaction.response.send_message("This server doesn't have a house set up.", ephemeral=True)
+            return
+
+        view = DeleteHouseConfirmView(house["house_id"], house["name"], self.bot.db)
+        await interaction.response.send_message(
+            f"Are you sure you want to delete **{house['name']}**? "
+            "This will permanently erase all expenses, chores, bills, groceries, members, and every other record. "
+            "**This cannot be undone.**",
+            view=view,
+            ephemeral=True,
+        )
 
 
 async def setup(bot: commands.Bot):
