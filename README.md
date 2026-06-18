@@ -19,6 +19,8 @@ nagging.
 - **Subscriptions** — store shared subscription credentials (Netflix, Spotify,
   etc.) with Fernet-encrypted passwords. Only house members can retrieve them,
   and passwords are always shown privately (ephemeral).
+- **House wiki** — a shared reference for anything the house needs to remember:
+  Wi-Fi password, landlord contact, lease info, parking rules, etc.
 - **Channels** — an interactive picker that creates the house's Discord
   channels (`#chores`, `#rent-and-utilities`, `#groceries`, and more).
 
@@ -352,6 +354,43 @@ Update the email and/or password for an existing subscription.
 Delete a subscription.
 - `name` — which subscription to remove.
 
+### House wiki
+
+A shared reference for anything the house needs to remember. Entries are
+simple key/value pairs — the key is a short label (case-insensitive), the value
+is whatever text you want to store. Good for:
+
+- Wi-Fi password
+- Landlord name and contact number
+- Lease end date
+- Utility account numbers
+- Building entry code
+- Parking rules
+
+Entries are grouped into five categories: **Access & Security**, **Utilities & Services**, **Building & Maintenance**, **House Rules**, and **Lease & Legal** (plus **General** as a catch-all). Keys are case-insensitive — `WiFi Password` and `wifi password` are the same entry.
+
+#### `/wiki-setup`
+Pre-populate the wiki with 27 common entries (building entry code, trash pickup day, quiet hours, lease end date, etc.) as `(not set)` placeholders. Safe to run at any time — entries you've already filled in are never overwritten.
+- No arguments.
+
+#### `/wiki-set`
+Add a new entry or overwrite an existing one.
+- `key` — short label, e.g. `wifi password` or `landlord contact`.
+- `value` — the information to store.
+- `category` *(optional)* — which section it belongs in (default: General).
+
+#### `/wiki`
+Look up a single entry by key.
+- `key` — what to look up.
+
+#### `/wiki-list`
+Show every entry grouped by category.
+- No arguments.
+
+#### `/wiki-remove`
+Delete an entry.
+- `key` — which entry to remove.
+
 #### `/meal-close`
 Close the poll and announce the winner to `#groceries`. Ties go to the meal proposed first. Requires at least one vote.
 - No arguments.
@@ -416,7 +455,8 @@ cogs/
   finance.py       # /bill-add, /bills, /bill-post, /bill-remove
   groceries.py     # /grocery-add, /groceries, /grocery-bought, /grocery-remove, /grocery-done
   leaderboard.py   # /leaderboard; monthly cross-system rankings auto-post
-  meals.py         # /meal-propose, /meal-vote, /meal-results, /meal-close
+  meals.py         # /propose, /meal-vote, /meal-results, /meal-close
+  wiki.py          # /wiki-set, /wiki, /wiki-list, /wiki-remove
   scheduler.py     # the daily auto-post loop
 docs/superpowers/specs/   # design docs for each feature
 tests/             # unit tests (pure + DB layers)

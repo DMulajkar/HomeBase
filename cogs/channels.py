@@ -31,6 +31,7 @@ CHANNEL_CATALOG = [
     ChannelSpec("food", "Meals, recipes, leftovers, and dinner plans.", "Meals, recipes & dinner plans"),
     ChannelSpec("events", "House events, hangouts, and shared calendar.", "Plan house events & hangouts"),
     ChannelSpec("memories", "Photos and moments from the house.", "Share photos & house moments"),
+    ChannelSpec("wiki", "House reference: Wi-Fi, landlord, lease, rules, and more.", "House reference & shared info"),
     ChannelSpec("bot-commands", "Run HomeBase bot commands here.", "A place to run bot commands"),
     ChannelSpec(
         "welcome",

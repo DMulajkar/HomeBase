@@ -4,6 +4,7 @@ EXPECTED_NAMES = {
     "chores",
     "rent-and-utilities",
     "groceries",
+    "wiki",
     "food",
     "events",
     "memories",
