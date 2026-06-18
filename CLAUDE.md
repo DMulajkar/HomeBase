@@ -120,7 +120,7 @@ Purpose: the smaller quality-of-life systems that reduce roommate friction and k
 
 - [ ] **Vacation mode** — temporarily remove someone from the chore rotation, recalculate bill splits to exclude them for the period, and pause their reminders; restore on return.
 - [ ] **Roommate birthdays** — store birthdays and auto-post reminders.
-- [ ] **Anonymous suggestions** — `/suggestion` posts an anonymized suggestion to the house to surface tension without attribution.
+- [x] **Anonymous suggestions** (`cogs/suggestions.py`) — `/suggestion text` posts the text to `#suggestions` without attribution; user gets an ephemeral confirmation only. Member ID stored in DB for moderation but never shown. Pure `format_suggestion(text, number)`; DB `record_suggestion` / `suggestion_count`.
 
 ### Phase 5 — House Command Center (the unifying dashboard)
 

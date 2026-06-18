@@ -21,6 +21,8 @@ nagging.
   and passwords are always shown privately (ephemeral).
 - **House wiki** — a shared reference for anything the house needs to remember:
   Wi-Fi password, landlord contact, lease info, parking rules, etc.
+- **Anonymous suggestions** — submit feedback or surface tension without
+  attribution; the bot posts it to `#suggestions` with no name attached.
 - **Channels** — an interactive picker that creates the house's Discord
   channels (`#chores`, `#rent-and-utilities`, `#groceries`, and more).
 
@@ -391,6 +393,19 @@ Show every entry grouped by category.
 Delete an entry.
 - `key` — which entry to remove.
 
+### Anonymous suggestions
+
+A one-way channel for surfacing feedback without putting anyone on the spot.
+Suggestions are numbered (`#1`, `#2`, …) so the house can refer to them, but
+the author's name is never shown.
+
+#### `/suggestion`
+Post an anonymous suggestion to `#suggestions`. Only you see the confirmation;
+everyone else sees only the numbered suggestion text.
+- `text` — the suggestion.
+
+Requires the `#suggestions` channel to exist (create it with `/setup-channels`).
+
 #### `/meal-close`
 Close the poll and announce the winner to `#groceries`. Ties go to the meal proposed first. Requires at least one vote.
 - No arguments.
@@ -457,6 +472,7 @@ cogs/
   leaderboard.py   # /leaderboard; monthly cross-system rankings auto-post
   meals.py         # /propose, /meal-vote, /meal-results, /meal-close
   wiki.py          # /wiki-set, /wiki, /wiki-list, /wiki-remove
+  suggestions.py   # /suggestion (anonymous)
   scheduler.py     # the daily auto-post loop
 docs/superpowers/specs/   # design docs for each feature
 tests/             # unit tests (pure + DB layers)
