@@ -14,6 +14,11 @@ nagging.
   ledger; fixed bills post themselves on their due day.
 - **Groceries** — a shared shopping list grouped into Food / Household / Cleaning,
   with add, bought, and remove.
+- **Meal voting** — propose meals, vote (and change your vote), see standings,
+  and close the poll to announce the winner.
+- **Subscriptions** — store shared subscription credentials (Netflix, Spotify,
+  etc.) with Fernet-encrypted passwords. Only house members can retrieve them,
+  and passwords are always shown privately (ephemeral).
 - **Channels** — an interactive picker that creates the house's Discord
   channels (`#chores`, `#rent-and-utilities`, `#groceries`, and more).
 
@@ -38,6 +43,16 @@ GUILD_ID=your-server-id      # optional: instant slash-command sync for one serv
 Leave `GUILD_ID` blank for global command sync (can take ~an hour to appear in
 Discord). With it set, commands sync instantly to that one server — use it
 during development.
+
+To enable encrypted subscription password storage, generate a key and add it:
+
+```powershell
+py -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Add the output to `.env` as `SUBSCRIPTION_KEY=<output>`. Without it the
+`/sub-add` and `/sub-password` commands are disabled (the rest of the bot works
+fine).
 
 The bot needs these Discord permissions in your server: **View Channels**,
 **Send Messages**, **Embed Links**, and **Manage Channels** (for channel
@@ -243,6 +258,104 @@ Marks an item as bought, removing it from the active list (and crediting you).
 Removes an item that's no longer needed (without marking it bought).
 - `name` — the item to remove.
 
+### Meal voting
+
+One poll at a time per house. Propose meals, vote, and close when ready.
+
+#### `/meal-propose`
+Propose a meal for the house to vote on. If no poll is open, this starts one.
+- `name` — the meal, e.g. `Tacos`.
+
+#### `/meal-vote`
+Vote for a meal in the current poll. You can change your vote at any time before the poll closes.
+- `name` — the meal you want.
+
+#### `/meal-results`
+Show the current standings without closing the poll.
+- No arguments.
+
+### Subscriptions
+
+Store shared account credentials for house subscriptions (Netflix, Spotify,
+etc.) so everyone in the house can access them without asking in the group chat.
+
+#### How password storage works
+
+When you save a subscription, the bot **never stores your password in plain
+text**. Here's what actually happens:
+
+1. **You run `/sub-add`** with the password. Discord sends the command to the
+   bot over an encrypted HTTPS connection — it's not plaintext in transit.
+
+2. **The bot encrypts the password** using AES-128 (via the Fernet standard)
+   before writing anything to the database. The result is a scrambled token that
+   looks like `gAAAAABn4xK2...` — meaningless without the key.
+
+3. **The database only ever holds the token**, not the password. If someone
+   grabbed the database file off the server, they would see ciphertext, not your
+   Netflix password.
+
+4. **The encryption key** (`SUBSCRIPTION_KEY` in `.env`) is what makes
+   decryption possible. It never touches the database and is gitignored, so it
+   is never accidentally committed to source control. If the key is lost,
+   passwords cannot be recovered — keep a backup somewhere safe.
+
+5. **When you run `/sub-password`**, the bot decrypts the token using the key
+   and sends the result back **only to you** (Discord ephemeral message — other
+   people in the channel cannot see it, and it disappears when you dismiss it).
+
+6. **`/subs` never shows passwords** — it only lists names and emails, so it is
+   safe to run in any channel.
+
+#### What this protects against
+
+| Scenario | Protected? |
+|---|---|
+| Someone reads the database file off disk | ✅ Only scrambled tokens, no plaintext |
+| Passwords visible in Discord chat history | ✅ Always sent privately (ephemeral) |
+| Bot source code leaks online | ✅ Key is in `.env`, not in the code |
+| Someone has both the DB file **and** the key | ❌ They can decrypt — keep your `.env` secure |
+
+The last row is the honest limit: this is **encryption at rest**, not a
+zero-knowledge vault. The bot needs the key to decrypt, so whoever controls the
+server and the `.env` file has access. For a home server shared with your
+housemates, this is the right level of protection. If you ever need to rotate
+the key, you will need to re-save all passwords with the new key.
+
+Requires `SUBSCRIPTION_KEY` to be set in `.env` (see Setup above). Without it,
+`/sub-add` and `/sub-password` are disabled but the rest of the bot works
+normally.
+
+#### `/sub-add`
+Save a subscription. The confirmation is private (ephemeral) so your password
+is never visible in chat.
+- `name` — service name, e.g. `Netflix`.
+- `email` — account email.
+- `password` — account password (stored encrypted).
+
+#### `/subs`
+List all saved subscriptions showing names and emails. **Passwords are never
+shown here.**
+- No arguments.
+
+#### `/sub-password`
+Retrieve the password for a subscription. **Only you see this response.**
+- `name` — which subscription.
+
+#### `/sub-update`
+Update the email and/or password for an existing subscription.
+- `name` — which subscription.
+- `email` *(optional)* — new email.
+- `password` *(optional)* — new password.
+
+#### `/sub-remove`
+Delete a subscription.
+- `name` — which subscription to remove.
+
+#### `/meal-close`
+Close the poll and announce the winner to `#groceries`. Ties go to the meal proposed first. Requires at least one vote.
+- No arguments.
+
 #### `/grocery-done`
 Ends a shopping run — marks **everything** on the list as bought, clears it for
 next time, and posts a trip summary to `#groceries`.
@@ -303,6 +416,7 @@ cogs/
   finance.py       # /bill-add, /bills, /bill-post, /bill-remove
   groceries.py     # /grocery-add, /groceries, /grocery-bought, /grocery-remove, /grocery-done
   leaderboard.py   # /leaderboard; monthly cross-system rankings auto-post
+  meals.py         # /meal-propose, /meal-vote, /meal-results, /meal-close
   scheduler.py     # the daily auto-post loop
 docs/superpowers/specs/   # design docs for each feature
 tests/             # unit tests (pure + DB layers)

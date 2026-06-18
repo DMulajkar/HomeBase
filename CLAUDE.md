@@ -106,8 +106,8 @@ Purpose: manage the shared grocery list, household supplies, and related spendin
 
 Purpose: the smaller quality-of-life systems that reduce roommate friction and keep shared knowledge in one place. Each is its own cog following the three-layer split; most are small enough to land in a single pass.
 
-- [ ] **Shared meal voting** — propose meals and vote; the bot tallies and announces the winner. Feeds Phase 3 meal planning and grocery lists.
-- [ ] **Subscription tracker** — track shared subscriptions (Netflix, Spotify Family, Amazon Prime, Costco membership): cost, renewal date, who pays. Likely a thin layer over the finance bills cog (a subscription is a fixed recurring bill) with subscription-specific listing.
+- [x] **Shared meal voting** (`cogs/meals.py`) — one open poll per house; `/meal-propose` adds options (starts the poll if none is open); `/meal-vote` casts or changes a vote; `/meal-results` shows standings; `/meal-close` closes the poll and announces the winner to `#groceries`. Ties broken by proposal order. Pure `tally_votes`, `format_poll_results`, `format_winner`; DB `meal_polls`, `meal_options`, `meal_votes`.
+- [x] **Subscription tracker** (`cogs/subscriptions.py`) — store shared subscription credentials: name, email, and password (Fernet-encrypted at rest; key in `.env` as `SUBSCRIPTION_KEY`, never committed). `/sub-add`, `/subs` (names + emails only, no passwords shown), `/sub-password` (always ephemeral), `/sub-update`, `/sub-remove`. Requires `cryptography>=42.0.0`.
 - [ ] **House wiki** — store and retrieve house reference info: Wi-Fi password, landlord contact, lease information, utility account numbers, parking rules. Simple key/value notes per house, retrievable on demand.
 - [x] **Leaderboards** (`cogs/leaderboard.py`) — cross-system monthly rankings combining chores (1 pt) and grocery runs (2 pts). `/leaderboard` shows the current month on demand; `render_monthly_leaderboard` auto-posts to `#chores` on the 1st (summarizes the previous month). Pure `compute_scores` (competition-tie ranking), `format_leaderboard`. Example output:
 
