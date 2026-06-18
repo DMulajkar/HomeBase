@@ -119,6 +119,11 @@ Features:
 
 Features: `/homebase` dashboard. Single at-a-glance status: bills due, chores pending, groceries needed, house health score (0–100), top priority. Reads all other systems; owns no tables.
 
+### Expense ledger & house deletion — DONE
+
+- **`/ledger`** (`cogs/expenses.py`) — shows every expense you were charged for (not paid by you), with description, date, payer name, and your share. Ephemeral. Pure `get_ledger_entries` + `format_ledger`.
+- **`/delete-house`** (`cogs/core.py`) — permanently deletes the house and all associated data (expenses, chores, bills, groceries, members, etc.). Admin-only (`manage_guild` permission); confirmation button required. Pure `delete_house_data` handles FK-safe deletion order.
+
 ### Settings & configuration (planned, not yet implemented)
 
 Purpose: let each house tune the bot's behavior instead of relying on hardcoded constants. Today values like `REMINDER_HOUR_UTC`, `REMINDER_LEAD_DAYS`, and `SUMMARY_DAY` are module-level constants shared by every house; this feature will move per-house overrides into the DB.

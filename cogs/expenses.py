@@ -179,6 +179,36 @@ def get_payments(conn: sqlite3.Connection, house_id: int) -> list[tuple[int, int
     return [(row["from_member_id"], row["to_member_id"], row["amount_cents"]) for row in rows]
 
 
+def get_ledger_entries(
+    conn: sqlite3.Connection, house_id: int, member_id: int
+) -> list[sqlite3.Row]:
+    """Expenses where member_id was charged (appears in splits) but did not pay."""
+    return conn.execute(
+        """
+        SELECT e.description, e.created_at, e.paid_by_member_id, es.share_cents
+        FROM expense_splits es
+        JOIN expenses e ON es.expense_id = e.expense_id
+        WHERE e.house_id = ?
+          AND es.member_id = ?
+          AND e.paid_by_member_id != ?
+        ORDER BY e.created_at DESC
+        """,
+        (house_id, member_id, member_id),
+    ).fetchall()
+
+
+def format_ledger(entries: list[sqlite3.Row], member_names: dict[int, str]) -> str:
+    if not entries:
+        return "Nothing here — no one has charged you for anything yet."
+    lines = []
+    for row in entries:
+        date = row["created_at"][:10]
+        payer = member_names.get(row["paid_by_member_id"], "someone")
+        amount = f"${row['share_cents'] / 100:.2f}"
+        lines.append(f"{date}  {payer} — {row['description']} ({amount})")
+    return "\n".join(lines)
+
+
 async def _get_house_and_member(bot: commands.Bot, interaction: discord.Interaction):
     if interaction.guild is None:
         await interaction.response.send_message("This command must be used in a server.", ephemeral=True)
@@ -333,6 +363,18 @@ class Expenses(commands.Cog):
                 pass
         else:
             await interaction.response.send_message(confirmation)
+
+    @app_commands.command(name="ledger", description="See every expense you've been charged for, with descriptions and dates")
+    async def ledger(self, interaction: discord.Interaction):
+        result = await _get_house_and_member(self.bot, interaction)
+        if result is None:
+            return
+        house, member = result
+
+        entries = get_ledger_entries(self.bot.db, house["house_id"], member["member_id"])
+        member_names = {m["member_id"]: m["display_name"] for m in database.list_members(self.bot.db, house["house_id"])}
+        text = format_ledger(entries, member_names)
+        await interaction.response.send_message(f"**Your ledger:**\n```\n{text}\n```", ephemeral=True)
 
     @app_commands.command(name="balances", description="Show who owes whom in this house")
     async def balances(self, interaction: discord.Interaction):
