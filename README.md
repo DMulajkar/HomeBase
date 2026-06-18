@@ -21,6 +21,9 @@ nagging.
   and passwords are always shown privately (ephemeral).
 - **House wiki** — a shared reference for anything the house needs to remember:
   Wi-Fi password, landlord contact, lease info, parking rules, etc.
+- **Birthdays** — store each roommate's birthday (month and day only); the bot
+  auto-posts a reminder to `#events` on the day. Prompted automatically when
+  someone runs `/join-house`.
 - **Anonymous suggestions** — submit feedback or surface tension without
   attribution; the bot posts it to `#suggestions` with no name attached.
 - **Channels** — an interactive picker that creates the house's Discord
@@ -393,6 +396,23 @@ Show every entry grouped by category.
 Delete an entry.
 - `key` — which entry to remove.
 
+### Birthdays
+
+#### `/birthday-set`
+Set or update your birthday. Opens a short form where you enter the date — no
+year needed, just month and day. Accepted formats: `March 15`, `3/15`, `03-15`.
+- No arguments (opens a modal).
+
+#### `/birthdays`
+Show all house members who have a birthday on record, sorted by month and day.
+- No arguments.
+
+The bot also auto-posts a birthday message to `#events` on the morning of
+someone's birthday. Members who haven't added their birthday won't appear.
+
+When you run `/join-house`, the bot will ask if you want to add your birthday
+right then. You can always add or update it later with `/birthday-set`.
+
 ### Anonymous suggestions
 
 A one-way channel for surfacing feedback without putting anyone on the spot.
@@ -443,6 +463,8 @@ The scheduler checks every 15 minutes and posts once per day, at **09:00 UTC**:
 - **Monthly grocery spending report** → `#groceries`: on the 1st of each month,
   a summary of last month's total grocery spend and a per-member breakdown of
   who did shopping runs.
+- **Birthday reminders** → `#events`: on the morning of a member's birthday, a
+  message calling out their name. Only members who have added a birthday appear.
 
 These require the matching channel to exist under the **HomeBase** category
 (created by `/house-setup` or `/setup-channels`).
@@ -471,6 +493,7 @@ cogs/
   groceries.py     # /grocery-add, /groceries, /grocery-bought, /grocery-remove, /grocery-done
   leaderboard.py   # /leaderboard; monthly cross-system rankings auto-post
   meals.py         # /propose, /meal-vote, /meal-results, /meal-close
+  birthdays.py     # /birthday-set, /birthdays; birthday prompt on /join-house
   wiki.py          # /wiki-set, /wiki, /wiki-list, /wiki-remove
   suggestions.py   # /suggestion (anonymous)
   scheduler.py     # the daily auto-post loop

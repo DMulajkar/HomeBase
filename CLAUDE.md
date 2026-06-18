@@ -119,7 +119,7 @@ Purpose: the smaller quality-of-life systems that reduce roommate friction and k
   ```
 
 - [ ] **Vacation mode** — temporarily remove someone from the chore rotation, recalculate bill splits to exclude them for the period, and pause their reminders; restore on return.
-- [ ] **Roommate birthdays** — store birthdays and auto-post reminders.
+- [x] **Roommate birthdays** (`cogs/birthdays.py`) — `/birthday-set` (opens a modal), `/birthdays` (list all); birthday prompt offered as an ephemeral followup after `/join-house`. Daily auto-post to `#events` when it's someone's birthday (`render_birthday_reminder`). Stores month+day only (no year). Pure `parse_birthday` (multi-format), `format_birthday_list`, `month_day_label`; DB `member_birthdays` keyed by `member_id`.
 - [x] **Anonymous suggestions** (`cogs/suggestions.py`) — `/suggestion text` posts the text to `#suggestions` without attribution; user gets an ephemeral confirmation only. Member ID stored in DB for moderation but never shown. Pure `format_suggestion(text, number)`; DB `record_suggestion` / `suggestion_count`.
 
 ### Phase 5 — House Command Center (the unifying dashboard)

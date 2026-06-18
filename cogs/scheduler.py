@@ -7,7 +7,7 @@ from discord.ext import commands, tasks
 
 import database
 import scheduler
-from cogs import channels, chores, finance, groceries, leaderboard
+from cogs import birthdays, channels, chores, finance, groceries, leaderboard
 
 REMINDER_HOUR_UTC = 9
 CHECK_INTERVAL_MINUTES = 15
@@ -29,6 +29,7 @@ JOBS = [
     ScheduledJob(key="monthly-summary", channel="rent-and-utilities", render=finance.render_monthly_summary),
     ScheduledJob(key="grocery-spending", channel="groceries", render=groceries.render_spending_report),
     ScheduledJob(key="leaderboard", channel="chores", render=leaderboard.render_monthly_leaderboard),
+    ScheduledJob(key="birthday-reminder", channel="events", render=birthdays.render_birthday_reminder),
 ]
 
 

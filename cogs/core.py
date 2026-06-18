@@ -3,6 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import database
+from cogs.birthdays import BirthdayPromptView
 from cogs.channels import ChannelSetupView
 
 
@@ -47,10 +48,15 @@ class Core(commands.Cog):
             await interaction.response.send_message("You're already a member of this house.", ephemeral=True)
             return
 
-        database.add_member(
+        member_id = database.add_member(
             self.bot.db, house["house_id"], str(interaction.user.id), interaction.user.display_name
         )
         await interaction.response.send_message(f"{interaction.user.display_name} joined the house!")
+        await interaction.followup.send(
+            "Would you like to add your birthday? The house will be reminded on your big day.",
+            view=BirthdayPromptView(self.bot, member_id),
+            ephemeral=True,
+        )
 
     @app_commands.command(name="house-members", description="See who's in this house")
     async def house_members(self, interaction: discord.Interaction):
