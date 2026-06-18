@@ -4,23 +4,44 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Environment
 
-**Use the `py` launcher for everything.** On this machine `python` / `python3` are broken Windows Store stub shims and will fail. The interpreter is Python 3.12 via `py`.
+**Windows**: Use the `py` launcher. On this machine `python` / `python3` are broken Windows Store stub shims.
+
+**macOS/Linux**: Use `python3` directly.
+
+The target is Python 3.12.
 
 ## Commands
 
 ```powershell
+# Windows
 py -m pip install -r requirements.txt   # install deps
 py bot.py                               # run the bot (reads .env)
 py -m pytest                            # run the full test suite
 py -m pytest -v                         # verbose
 py -m pytest tests/test_expenses_db.py::test_record_expense_end_to_end_balance -v   # single test
+
+# macOS/Linux
+python3 -m pip install -r requirements.txt
+python3 bot.py
+python3 -m pytest
 ```
 
-There is no build step and no linter configured. `.env` (gitignored) must contain `DISCORD_TOKEN`; set `GUILD_ID` to a server ID for instant slash-command sync during development (leave blank for global sync, which can take ~an hour to propagate).
+There is no build step and no linter configured. `.env` (gitignored) must contain:
+- `DISCORD_TOKEN` — required, the bot's API token
+- `GUILD_ID` — optional, a server ID for instant slash-command sync during development (leave blank for global sync, ~1 hour)
+- `SUBSCRIPTION_KEY` — optional, generated via `Fernet.generate_key()` to enable encrypted password storage in `/sub-add`
+
+## Deployment
+
+**For local development**: Run `py bot.py` (Windows) or `python3 bot.py` (macOS/Linux) locally.
+
+**For 24/7 hosting at no cost**: Deploy to Oracle Cloud's Always Free tier (1 Ampere A1 instance + 1 TB storage). See the README for step-by-step instructions. Use systemd to keep the bot running and auto-restart on crash.
 
 ## What this is
 
-A Discord bot for managing a shared house/apartment with roommates, built incrementally one feature at a time. So far: the expenses feature (`cogs/expenses.py`), channel setup (`cogs/channels.py`, an interactive picker that creates the house's Discord channels), the chores system slice 1 (`cogs/chores.py`, deterministic time-based rotation), an auto-post scheduler (`scheduler.py` + `cogs/scheduler.py`) that posts a daily chore reminder, the recurring bills feature (`cogs/finance.py`, fixed/variable bills that post into the expenses ledger; fixed bills auto-post on their due day), and the groceries feature (`cogs/groceries.py`, a shared categorized grocery list). Future features (maintenance, governance) will each arrive as a separate cog. **Do not build features ahead of the current request** — the scope is deliberately one feature per pass.
+A full-featured Discord bot for managing a shared house/apartment with roommates. It handles expenses, bills, chores, groceries, meal voting, subscriptions, a house wiki, birthdays, vacation mode, anonymous suggestions, leaderboards, and a unified dashboard (`/homebase`). Built incrementally one feature at a time, following a three-layer architecture: pure functions (testable logic), DB functions (against `sqlite3`), and Discord command handlers. Tests use in-memory databases and do not require a live Discord connection.
+
+All phases through Phase 5 are complete (Phases 1–5). Phase 6 (AI features) is planned but not yet started.
 
 ## Architecture
 
@@ -46,100 +67,70 @@ A new feature is a new file in `cogs/`. Wire it up by adding one `await self.loa
 
 ## Roadmap
 
-The target product is three operational house systems built around three core channels: `#chores`, `#rent-and-utilities`, and `#groceries`. This roadmap is the **plan**, not a license to build ahead — the one-feature-per-pass rule above still holds. Build phases top to bottom; within a phase, land features one at a time with tests. Check items off as they ship.
+**Phases 1–5 are complete.** The bot is feature-complete and production-ready. Phase 6 (AI features) is planned but not yet started.
 
-### Done
+### Completed phases
 
-- [x] **Expenses cog** (`cogs/expenses.py`) — `/expense`, `/pay`, `/balances`; equal splits in integer cents; net pairwise balances. This is the foundation the finance system extends.
-- [x] **Channel setup** (`cogs/channels.py`) — interactive picker that creates the `HomeBase` category and channels. Note: the current catalog has no `rent-and-utilities` channel — Phase 1 should add it.
-- [x] **Chores slice 1** (`cogs/chores.py`) — deterministic time-based rotation (daily/weekly/monthly), `/chore-add`, `/chores`, `/complete`, `/swap` (one-off per-period override), `/chore-history` (completion tally). No auto-posting. Spec: `docs/superpowers/specs/2026-06-16-chores-slice-1-design.md`.
-- [x] **Auto-post scheduler** (`scheduler.py` + `cogs/scheduler.py`) — `discord.ext.tasks` loop (15 min) that runs once-daily jobs at `REMINDER_HOUR_UTC` per house, resolving the target channel by name. Pure `is_due(now, last_run, hour)`; per-(house, job) state in `schedule_state`. Jobs register in the `JOBS` list. First job: daily chore reminder to `#chores`. Spec: `docs/superpowers/specs/2026-06-17-auto-post-scheduler-slice-1-design.md`.
+The three core channels are fully operational:
+- **`#chores`** — Automatic chore rotation, completion tracking, daily reminders, monthly rankings.
+- **`#rent-and-utilities`** — Recurring bills (fixed/variable), payment tracking, due-date reminders, monthly summaries.
+- **`#groceries`** — Shared grocery list, shopping-run summaries, monthly spending reports.
 
-### Cross-cutting prerequisite: scheduler — DONE
+Plus cross-cutting systems: `/homebase` dashboard, meal voting, subscriptions (encrypted passwords), house wiki, vacation mode, birthdays, anonymous suggestions, and multi-system leaderboards.
 
-The scheduler exists (`scheduler.py` pure/DB + `cogs/scheduler.py` loop). To add a new auto-post: write a `render(conn, house_id, today) -> str | None` function in the feature cog and append a `ScheduledJob(key, channel, render)` to `JOBS` in `cogs/scheduler.py`. All jobs currently run once daily at `REMINDER_HOUR_UTC` (per-house time/timezone config is still a future addition). Schedule-decision logic stays pure (layer 1) and per-house state lives in `schedule_state`.
+### Architecture: the scheduler
+
+To add a new auto-post: write a `render(conn, house_id, today) -> str | None` function in the feature cog and append a `ScheduledJob(key, channel, render)` to `JOBS` in `cogs/scheduler.py`. All jobs run once daily at `REMINDER_HOUR_UTC` (per-house time/timezone config is a future addition). Schedule-decision logic stays pure (layer 1) and per-house state lives in `schedule_state`.
 
 ### Phase 1 — Finance system (`#rent-and-utilities`)
 
-Purpose: the bot always knows who owes money, who is owed, current balances, and upcoming bills. Extends the existing expenses cog (likely a new `cogs/finance.py` that reuses the splitting/balance helpers, or an expansion of `expenses.py`).
+**Complete.** See `cogs/expenses.py` and `cogs/finance.py`.
 
-- [x] Expense tracking, balance tracking, payment tracking, settlement calculations (already in expenses cog)
-- [x] Add `rent-and-utilities` to the channel catalog
-- [x] Recurring **bills**: rent, utilities, internet, shared subscriptions (`cogs/finance.py`; fixed vs variable kind, fixed payer per bill, equal split, monthly cadence). Spec: `docs/superpowers/specs/2026-06-17-recurring-bills-slice-1-design.md`.
-- [x] `/bill-add`, `/bills`, `/bill-post`, `/bill-remove` commands; fixed bills auto-post on their due day via the scheduler; reuse `/pay` and `/balances`. (Supersedes the literal `/rent`/`/utilities` names — those would be aliases.)
-- [x] Due-date reminders (auto-post): daily heads-up of bills due within 3 days (`render_upcoming_bills`). Spec: `docs/superpowers/specs/2026-06-17-finance-autoposts-slice-design.md`.
-- [x] Monthly financial summary / report (auto-post): outstanding balances, who owes whom (`render_monthly_summary`, posts on the 1st). Same spec.
-- [x] Payment confirmations (auto-post): `/pay` posts a confirmation with the updated pairwise balance to `#rent-and-utilities` (event-driven, not scheduler-based; `format_payment_confirmation` + `net_between` in `cogs/expenses.py`). Spec: `docs/superpowers/specs/2026-06-17-payment-confirmations-slice-design.md`.
-
-**Phase 1 is complete.** Next up is Phase 2 (chores auto-posts: completion confirmations, overdue alerts, streaks/rankings).
+Features: `/expense`, `/pay`, `/balances`, `/bill-add`, `/bills`, `/bill-post`, `/bill-remove`. Equal splits in integer cents; net pairwise balances. Fixed bills auto-post on their due day. Auto-posts: due-date reminders, monthly summaries, payment confirmations.
 
 ### Phase 2 — Chores system (`#chores`)
 
-Purpose: manage recurring house responsibilities and distribute them fairly over time.
+**Complete.** See `cogs/chores.py`.
 
-- [x] Chore definitions with cadence: daily / weekly / monthly (`/chore-add`)
-- [x] Chore assignments and **automatic rotation** (deterministic round-robin by time)
-- [x] `/chores` (view), `/complete`, `/swap`, `/chore-history`
-- [x] Completion tracking (contribution tally via `/chore-history`)
-- [x] Daily chore reminder (auto-post to `#chores` via the scheduler)
-- [x] Confirmations on completion (auto-post): `/complete` posts a public confirmation with the member's contribution count to `#chores` (event-driven, like payment confirmations; `format_completion_confirmation` + `member_completion_count` in `cogs/chores.py`). Spec: `docs/superpowers/specs/2026-06-17-chore-completion-confirmations-slice-design.md`.
-- [~] ~~Overdue detection + alerts (auto-post)~~ — **dropped** (2026-06-17, product decision; not building).
-- [x] Streaks and contribution rankings (auto-post): monthly chore leaderboard posted to `#chores` on the 1st, summarizing the month that just ended, with per-member streaks (`render_rankings`, plus pure `rank_members` / `monthly_streak` / `format_rankings` in `cogs/chores.py`). Spec: `docs/superpowers/specs/2026-06-17-chore-rankings-slice-design.md`.
-
-**Phase 2 is complete** (overdue alerts deliberately dropped). Next up is Phase 3 (Groceries system).
-
-Keep the fairness/rotation algorithm a pure function (layer 1) so it is unit-tested in isolation.
+Features: `/chore-add`, `/chores`, `/complete`, `/swap`, `/chore-history`, `/leaderboard`. Automatic round-robin rotation (daily/weekly/monthly). Completion tracking with per-member tally. Auto-posts: daily reminders, monthly rankings, completion confirmations. The rotation algorithm is pure and unit-tested.
 
 ### Phase 3 — Groceries system (`#groceries`)
 
-Purpose: manage the shared grocery list, household supplies, and related spending.
+**Complete.** See `cogs/groceries.py`.
 
-- [x] **Groceries slice 1** (`cogs/groceries.py`) — shared grocery list with categories (Food / Household Supplies / Cleaning Supplies); `/grocery-add`, `/groceries` (view), `/grocery-bought`, `/grocery-remove`. Active items are unique per house via a partial index, so a bought item becomes history and can be needed again. No auto-posts yet. Spec: `docs/superpowers/specs/2026-06-17-groceries-slice-1-design.md`. (Command names are flat/hyphenated to match `/chore-add`, `/bill-add` — superseding the `/grocery add` subcommand spelling in the original roadmap.)
-- [~] ~~Inventory tracking + low-stock warnings (auto-post)~~ — **skipped** (product decision).
-- [x] Shopping-run trip summary: `/grocery-done` clears the whole active list (marks all items bought), optionally records a split expense for the total spend, and posts a trip summary to `#groceries` (event-driven, same channel-fallback pattern as `/pay` and `/complete`). Pure `format_trip_summary`; DB `finish_shopping_run`. Per-item confirmations were deliberately skipped (too noisy for grocery runs).
-- [x] Grocery spending analytics / reports (auto-post): monthly spend report posted to `#groceries` on the 1st, summarizing the previous month's total and per-member breakdown. Runs tracked in `grocery_runs` table (records `expense_id`, `amount_cents`, `run_at`). Pure `spending_by_member`, `format_spending_report`; DB `grocery_runs_for_month`; `render_spending_report` wired as a `ScheduledJob`.
-- [~] ~~`/meal-plan` meal planning~~ — **deferred to Phase 6 (AI features)**, where it fits better as an AI-assisted feature.
-
-**Phase 3 is complete.** Next up is Phase 4 (house life & coordination).
+Features: `/grocery-add`, `/groceries`, `/grocery-bought`, `/grocery-remove`, `/grocery-done`. Categorized list (Food, Household, Cleaning). Active items unique via partial index. Auto-posts: trip summaries, monthly spending reports.
 
 ### Phase 4 — House life & coordination
 
-Purpose: the smaller quality-of-life systems that reduce roommate friction and keep shared knowledge in one place. Each is its own cog following the three-layer split; most are small enough to land in a single pass.
+**Complete.** See `cogs/meals.py`, `cogs/subscriptions.py`, `cogs/wiki.py`, `cogs/leaderboard.py`, `cogs/vacation.py`, `cogs/birthdays.py`, `cogs/suggestions.py`.
 
-- [x] **Shared meal voting** (`cogs/meals.py`) — one open poll per house; `/meal-propose` adds options (starts the poll if none is open); `/meal-vote` casts or changes a vote; `/meal-results` shows standings; `/meal-close` closes the poll and announces the winner to `#groceries`. Ties broken by proposal order. Pure `tally_votes`, `format_poll_results`, `format_winner`; DB `meal_polls`, `meal_options`, `meal_votes`.
-- [x] **Subscription tracker** (`cogs/subscriptions.py`) — store shared subscription credentials: name, email, and password (Fernet-encrypted at rest; key in `.env` as `SUBSCRIPTION_KEY`, never committed). `/sub-add`, `/subs` (names + emails only, no passwords shown), `/sub-password` (always ephemeral), `/sub-update`, `/sub-remove`. Requires `cryptography>=42.0.0`.
-- [x] **House wiki** (`cogs/wiki.py`) — categorized key/value reference store. Five categories (Access & Security, Utilities & Services, Building & Maintenance, House Rules, Lease & Legal) plus General. `/wiki-set key value [category]` upserts; `/wiki key` retrieves; `/wiki-list` shows all grouped by category; `/wiki-remove` deletes; `/wiki-setup` seeds 27 common entries as `(not set)` placeholders (skips any already filled in). Keys are case-insensitive. DB column added safely via `ALTER TABLE` for existing installs.
-- [x] **Leaderboards** (`cogs/leaderboard.py`) — cross-system monthly rankings combining chores (1 pt) and grocery runs (2 pts). `/leaderboard` shows the current month on demand; `render_monthly_leaderboard` auto-posts to `#chores` on the 1st (summarizes the previous month). Pure `compute_scores` (competition-tie ranking), `format_leaderboard`. Example output:
+Features:
+- **Meal voting**: `/meal-propose`, `/meal-vote`, `/meal-results`, `/meal-close`. One poll per house; ties broken by proposal order.
+- **Subscriptions**: `/sub-add`, `/subs`, `/sub-password`, `/sub-update`, `/sub-remove`. Fernet-encrypted passwords at rest.
+- **House wiki**: `/wiki-set`, `/wiki`, `/wiki-list`, `/wiki-remove`, `/wiki-setup`. Five categories + General; case-insensitive keys.
+- **Leaderboards**: Cross-system monthly rankings (chores 1 pt, grocery runs 2 pts).
+- **Vacation mode**: `/vacation-start`, `/vacation-end`, `/vacations`. Excludes members from chore rotation and bill splits; shared `active_member_ids` helper.
+- **Birthdays**: `/birthday-set`, `/birthdays`. Month+day only; auto-post reminder on the day.
+- **Suggestions**: `/suggestion`. Anonymous; posted numbered to `#suggestions`.
 
-  ```
-  🏆 June Rankings
-  1. Sarah
-  2. Dhruv
-  3. Ryan
-  ```
+### Phase 5 — House Command Center
 
-- [x] **Vacation mode** (`cogs/vacation.py`) — `/vacation-start [member] [end]`, `/vacation-end [member]`, `/vacations`. Active vacationers are excluded from chore rotation (in `render_chores_reminder` and `/chores`) and from bill splits (in `render_due_fixed_bills` and `/bill-post`). `active_member_ids(conn, house_id, today)` is the shared cross-cog helper imported by chores and finance; it self-initializes its table so it's safe to call from tests that don't set up the vacation cog explicitly.
-- [x] **Roommate birthdays** (`cogs/birthdays.py`) — `/birthday-set` (opens a modal), `/birthdays` (list all); birthday prompt offered as an ephemeral followup after `/join-house`. Daily auto-post to `#events` when it's someone's birthday (`render_birthday_reminder`). Stores month+day only (no year). Pure `parse_birthday` (multi-format), `format_birthday_list`, `month_day_label`; DB `member_birthdays` keyed by `member_id`.
-- [x] **Anonymous suggestions** (`cogs/suggestions.py`) — `/suggestion text` posts the text to `#suggestions` without attribution; user gets an ephemeral confirmation only. Member ID stored in DB for moderation but never shown. Pure `format_suggestion(text, number)`; DB `record_suggestion` / `suggestion_count`.
+**Complete.** See `cogs/homebase.py`.
 
-### Phase 5 — House Command Center (the unifying dashboard)
+Features: `/homebase` dashboard. Single at-a-glance status: bills due, chores pending, groceries needed, house health score (0–100), top priority. Reads all other systems; owns no tables.
 
-Purpose: one command that rolls up the state of every other system. Depends on Phases 1–4 being in place (it reads from them; it owns no new domain data).
+### Settings & configuration (planned, not yet implemented)
 
-- [x] **`/homebase`** (`cogs/homebase.py`) — single at-a-glance status: bills due, chores pending, groceries needed, house health score (0–100), and a one-line top priority. Reads from chores/finance/groceries tables via their existing pure/DB functions; owns no tables of its own. Pure `compute_house_health`, `top_priority`, `format_homebase`; DB `gather_status`.
+Purpose: let each house tune the bot's behavior instead of relying on hardcoded constants. Today values like `REMINDER_HOUR_UTC`, `REMINDER_LEAD_DAYS`, and `SUMMARY_DAY` are module-level constants shared by every house; this feature will move per-house overrides into the DB.
 
-### Settings & configuration (cross-cutting)
-
-Purpose: let each house tune the bot's behavior instead of relying on hardcoded constants. Today values like `REMINDER_HOUR_UTC`, `REMINDER_LEAD_DAYS`, and `SUMMARY_DAY` are module-level constants shared by every house; this feature moves per-house overrides into the DB. Own its own `settings` table (one row per `house_id`, or key/value per house) and follow the three-layer split: pure validation/coercion, DB get/set with sensible defaults, and `/settings` plumbing.
-
-- [ ] **`/settings`** — view the house's current configuration (with defaults shown where unset).
-- [ ] **`/set`** — change one setting (validated). Candidate settings:
-  - reminder time of day + timezone (replaces the global `REMINDER_HOUR_UTC`; the scheduler note above flags this as the long-planned per-house config).
+Planned features:
+- `/settings` — view the house's current configuration (with defaults shown where unset).
+- `/set` — change one setting (validated). Candidates:
+  - reminder time of day + timezone (replaces the global `REMINDER_HOUR_UTC`).
   - due-date reminder lead days (`REMINDER_LEAD_DAYS`) and monthly-summary day (`SUMMARY_DAY`).
-  - per-auto-post enable/disable toggles (e.g. mute the daily chore reminder) — pairs with vacation mode in Phase 4.
-- [ ] Settings are read by the scheduler and feature cogs through a `get_setting(conn, house_id, key, default)` helper, so a missing row always falls back to today's constant (no migration needed; the constants become the defaults).
+  - per-auto-post enable/disable toggles (e.g. mute the daily chore reminder).
 
-Keep validation pure (layer 1) and the read path cheap — the scheduler tick reads settings per house every cycle.
+Settings will use a `get_setting(conn, house_id, key, default)` helper so missing rows fall back to today's constants (no migration needed).
 
 ### Phase 6 — AI features
 

@@ -35,11 +35,14 @@ Everything runs on slash commands. Run `/homebase` for a single at-a-glance summ
 
 ## Setup
 
-Requires **Python 3.12**. On this machine use the `py` launcher (`python` /
-`python3` are broken Windows Store stubs).
+Requires **Python 3.12**. On Windows, use the `py` launcher. On macOS/Linux use `python3`.
 
 ```powershell
+# Windows
 py -m pip install -r requirements.txt
+
+# macOS/Linux
+python3 -m pip install -r requirements.txt
 ```
 
 Create a `.env` file (gitignored) in the project root:
@@ -47,35 +50,130 @@ Create a `.env` file (gitignored) in the project root:
 ```
 DISCORD_TOKEN=your-bot-token-here
 GUILD_ID=your-server-id      # optional: instant slash-command sync for one server
+SUBSCRIPTION_KEY=your-key    # optional: enable /sub-add and /sub-password
 ```
 
-Leave `GUILD_ID` blank for global command sync (can take ~an hour to appear in
-Discord). With it set, commands sync instantly to that one server — use it
-during development.
+**`DISCORD_TOKEN`**: Create a bot at https://discord.com/developers/applications, enable the Message Content Intent, and copy the token from the Bot page.
 
-To enable encrypted subscription password storage, generate a key and add it:
+**`GUILD_ID`**: Optional. Set to your Discord server ID for instant slash-command sync during development. Leave blank for global sync (takes ~1 hour).
+
+**`SUBSCRIPTION_KEY`**: Optional. Generate a key to enable encrypted password storage:
 
 ```powershell
+# Windows
 py -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+
+# macOS/Linux
+python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
-Add the output to `.env` as `SUBSCRIPTION_KEY=<output>`. Without it the
-`/sub-add` and `/sub-password` commands are disabled (the rest of the bot works
-fine).
+Without `SUBSCRIPTION_KEY`, the `/sub-add` and `/sub-password` commands are disabled (everything else works fine).
 
-The bot needs these Discord permissions in your server: **View Channels**,
-**Send Messages**, **Embed Links**, and **Manage Channels** (for channel
-creation).
+**Required Discord permissions**: View Channels, Send Messages, Embed Links, Manage Channels.
 
-## Running
+## Running locally
 
 ```powershell
+# Windows
 py bot.py            # run the bot (reads .env)
 py -m pytest         # run the test suite
 py -m pytest -v      # verbose
+
+# macOS/Linux
+python3 bot.py
+python3 -m pytest
 ```
 
 There is no build step.
+
+## Deploying to Oracle Cloud (free tier)
+
+For 24/7 hosting at no cost, use Oracle Cloud's Always Free tier (1 Ampere A1 compute instance + 1 TB storage).
+
+**1. Create an Oracle Cloud account** at https://www.oracle.com/cloud/free/ and verify your email.
+
+**2. Create a compute instance**:
+- Go to **Compute → Instances** in the Oracle Console
+- Click **Create Instance**
+- Choose **Ubuntu 22.04** image (free tier eligible)
+- Choose **Ampere A1 Compute** shape (4 cores available)
+- Generate and download an SSH key pair
+- Click **Create** (takes 1–2 minutes)
+
+**3. Connect to the instance**:
+
+```powershell
+# Windows: set key permissions first
+icacls "path\to\your\key.key" /inheritance:r /grant:r "$env:USERNAME`:(F)"
+
+# Connect (use the instance's public IP)
+ssh -i "path\to\your\key.key" ubuntu@<instance-public-ip>
+```
+
+**4. Install dependencies**:
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y python3-pip python3-venv git
+
+# Clone the repo
+git clone https://github.com/<your-username>/HomeBase.git
+cd HomeBase
+pip3 install -r requirements.txt
+```
+
+**5. Set up `.env`**:
+
+```bash
+nano .env
+```
+
+Add your `DISCORD_TOKEN`, `GUILD_ID`, and `SUBSCRIPTION_KEY` (same as local setup).
+
+**6. Run with systemd** (auto-restarts on crash):
+
+```bash
+sudo nano /etc/systemd/system/homebase-bot.service
+```
+
+Paste this:
+
+```ini
+[Unit]
+Description=HomeBase Discord Bot
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/HomeBase
+ExecStart=/usr/bin/python3 /home/ubuntu/HomeBase/bot.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Save with **Ctrl+O**, Enter, **Ctrl+X**. Then:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable homebase-bot
+sudo systemctl start homebase-bot
+
+# Check status
+sudo systemctl status homebase-bot
+sudo journalctl -u homebase-bot -f  # tail logs
+```
+
+That's it! The bot runs 24/7 free and restarts automatically if it crashes. For updates, pull the latest code and restart:
+
+```bash
+cd /home/ubuntu/HomeBase
+git pull
+sudo systemctl restart homebase-bot
+```
 
 ## First-time house setup
 
