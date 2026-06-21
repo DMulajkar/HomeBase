@@ -1,7 +1,7 @@
 # HomeBase
 
-A Discord bot for running a shared house with roommates — expenses, chores, and
-recurring bills — built one feature at a time. It tracks who owes whom, rotates
+A Discord bot for running a shared house with roommates. expenses, chores, and
+recurring bills. It tracks who owes whom, rotates
 chores fairly, and posts daily reminders so the house keeps running without
 nagging.
 
