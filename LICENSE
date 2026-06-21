@@ -1,96 +1,78 @@
-Business Source License 1.1
+PolyForm Noncommercial License 1.0.0
 
-Parameters
+<https://polyformproject.org/licenses/noncommercial/1.0.0>
 
-Licensor: Dhruv Mulajkar
-Licensed Work: HomeBase
-Full name of Licensed Work: HomeBase Discord Bot
-Change Date: 2027-06-18
-Change License: MIT
+## Acceptance
 
-For information about alternative licensing arrangements for the Licensed Work,
-please contact the Licensor.
+In order to get any license to these terms, you must agree to them as both strict
+obligations and conditions to all other licenses granted to you in these terms.
 
-Notice
+## Copyright
 
-Business Source License 1.1
+The licensor retains all right, title, and interest in any work licensed under
+these terms.
 
-Terms
+## Permitted Uses
 
-The Licensor hereby grants you the right to copy, modify, create derivative
-works, and distribute the Licensed Work. Conditions of this license are below.
+If the Noncommercial Purposes definition in these terms does not describe a use,
+and you do not have another license from the licensor, you may not make that use
+of the work.
 
-For clarity, the Licensed Work includes each file in this repository marked
-with the following header:
+## Noncommercial Purposes
 
-    SPDX-License-Identifier: BSL-1.1
+**Noncommercial Purposes** means purposes other than for-profit purposes. **Purposes** includes research, education, personal projects, and any other use that is not primarily intended for or directed towards commercial advantage or monetary compensation.
 
-Distribution
+Specifically prohibited uses include, but are not limited to:
 
-You may distribute the Licensed Work (and any work "Derived" from the Licensed
-Work) provided that you meet the following conditions:
+- Providing the work to others as a service for a fee
+- Selling access to the work
+- Hosting the work for commercial purposes
+- Using the work in a commercial product or service
+- Using the work to generate revenue directly or indirectly
 
-(a) You must include in the "display" of each Derived Work, and on any related
-documentation, notice that the Licensed Work is provided under this Business
-Source License and may be used for non-production purposes only, unless You have
-received an explicit license from the Licensor to use it otherwise. The notice
-must be in the form specified in Exhibit A.
+## No Other Rights
 
-(b) You may not use the Licensed Work for a Competitive Purpose, by which we
-mean any use by a legal entity to offer products or services that compete,
-in substance or in the same market category, with the Licensed Work or with
-any products or services that the Licensor uses the Licensed Work to provide.
+These terms do not permit you to sublicense, sell, rent, lease, transfer, assign,
+or otherwise dispose of any copy of any work licensed under these terms.
 
-(c) If the Licensed Work includes "change date" information associated with a
-work, that work will be released under an "Open Source License" (as defined
-below) on the Change Date. "Open Source License" means an open source license
-which is OSI approved and which includes a provision that permits the work to
-be used for purposes other than to offer services to others on a time-sharing
-basis.
+These terms do not permit you to make any use of any work licensed under these
+terms that competes with the interests of the licensor.
 
-Reserved Rights
+## Disclaimers
 
-The Licensor reserves all rights not expressly granted in these terms.
+**As far as the law allows, each work licensed under these terms is provided as
+is, without any warranty or condition, express, implied, statutory, or otherwise.**
 
-Conditions
+## Limits on Liability
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+**As far as the law allows, you may not hold the licensor liable for anything
+relating to any work licensed under these terms, on any legal basis. That
+liability exclusion applies even if the licensor has been told of the possibility
+of the liability.**
 
-1. Redistributions of source code must retain the above license notice, this
-   list of conditions, and the following disclaimer.
+## Patent Defense
 
-2. Redistributions in binary form must reproduce the above license notice, this
-   list of conditions, and the following disclaimer in the documentation and/or
-   other materials provided with the distribution.
+If you make any written claim that a work licensed under these terms infringes or
+contributes to infringement of any patent, your patent licenses for any work
+licensed under these terms granted by the licensor end right away.
 
-3. Neither the name of the Licensor nor the names of any contributors may be
-   used to endorse or promote products derived from this Licensed Work without
-   specific prior written permission from the Licensor.
+## Termination
 
-4. You agree that you will not use the Licensed Work for any unlawful purpose
-   or in violation of any applicable laws or regulations.
+If you do not comply with the obligations of these terms, or if you do anything
+with any work licensed under these terms only as permitted by these terms, then
+your licenses under these terms end right away.
 
-5. The Licensed Work is provided on an "AS IS" basis, without warranties or
-   conditions of any kind, either express or implied, including, without
-   limitation, any warranties or conditions of title, non-infringement,
-   merchantability, or fitness for a particular purpose.
+## No Delegation
 
-6. In no event and under no legal theory, whether in tort (including
-   negligence), contract, or otherwise, unless required by applicable law (such
-   as deliberate and grossly negligent acts) or agreed to in writing, shall any
-   Licensor be liable to you for damages, including any direct, indirect,
-   special, incidental, or consequential damages of any character arising as a
-   result of these License Terms or out of the use or inability to use the
-   Licensed Work (including but not limited to damages for loss of goodwill,
-   work stoppage, computer failure or malfunction, or any and all other
-   commercial damages or losses), even if such Licensor has been advised of the
-   possibility of such damages.
+None of these terms allow you to authorize anyone else to exercise rights only
+allowed to you personally.
 
-Exhibit A - Notice of Business Source License
+## No Other Conditions
 
-This file is subject to the Business Source License 1.1 that is bundled with
-this package in the file LICENSE.
+These terms do not require anyone accepting them to surrender any of their rights
+to any patent claims they may have about any work licensed under these terms.
 
-To view a copy of this Business Source License 1.1, visit
-https://mariadb.com/bsl11/
+## Interpretation
+
+If any part of these terms is unenforceable, the rest of these terms continue in
+full force and effect.

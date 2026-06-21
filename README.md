@@ -577,10 +577,16 @@ tests/             # unit tests (pure + DB layers)
 
 See `CLAUDE.md` for architecture details and the feature roadmap.
 
+## Support
+
+If you find HomeBase useful and want to help support development, server costs, and future features, donations are always welcome.
+
+**Support on Venmo:** https://venmo.com/u/DhruvMulajkar
+
+Every dollar goes directly toward keeping the bot running reliably for your house.
+
 ## License
 
-This project is licensed under the **Business Source License 1.1** (BSL-1.1). You may use, modify, and distribute this software for non-production purposes. On **June 18, 2027**, this project will automatically convert to the MIT License.
-
-For a commercial license or other licensing inquiries, contact the Licensor.
+This project is licensed under the **PolyForm Noncommercial License 1.0.0**. You may use, modify, and distribute this software for noncommercial purposes only. Any commercial use is prohibited without explicit permission from the author.
 
 See the `LICENSE` file for full terms.

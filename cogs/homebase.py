@@ -1,10 +1,12 @@
 import sqlite3
 from datetime import date, datetime, timezone
+from io import BytesIO
 from typing import Optional
 
 import discord
 from discord import app_commands
 from discord.ext import commands
+import qrcode
 
 import database
 from cogs.chores import current_period_index, get_completion, list_chores
@@ -141,6 +143,17 @@ async def _get_house_and_member(bot: commands.Bot, interaction: discord.Interact
 class HomeBase(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.venmo_qr = self._generate_venmo_qr()
+
+    def _generate_venmo_qr(self) -> BytesIO:
+        qr = qrcode.QRCode(version=1, box_size=10, border=4)
+        qr.add_data("https://venmo.com/u/DhruvMulajkar")
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buf = BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        return buf
 
     @app_commands.command(name="homebase", description="At-a-glance status of the whole house")
     async def homebase(self, interaction: discord.Interaction):
@@ -163,15 +176,28 @@ class HomeBase(commands.Cog):
             status["groceries_needed"],
         )
 
-        await interaction.response.send_message(
-            format_homebase(
+        embed = discord.Embed(
+            title="HomeBase",
+            description=format_homebase(
                 bills_due,
                 status["chores_pending"],
                 status["groceries_needed"],
                 health,
                 priority,
-            )
+            ),
+            color=discord.Color.blue(),
         )
+        embed.add_field(
+            name="Support Us",
+            value="Enjoy managing the house with this bot? Support its development on Venmo: https://venmo.com/u/DhruvMulajkar. Scan the QR code below to donate.",
+            inline=False,
+        )
+
+        self.venmo_qr.seek(0)
+        qr_file = discord.File(self.venmo_qr, filename="venmo_qr.png")
+        embed.set_image(url="attachment://venmo_qr.png")
+
+        await interaction.response.send_message(embed=embed, file=qr_file)
 
 
 async def setup(bot: commands.Bot):
