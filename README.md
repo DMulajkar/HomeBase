@@ -33,6 +33,8 @@ nagging.
 
 Everything runs on slash commands. Run `/homebase` for a single at-a-glance summary of the whole house.
 
+**Coming soon**: Slack integration — HomeBase will also work as a Slack bot, bringing the same house management features to Slack workspaces.
+
 ## Setup
 
 Requires **Python 3.12**. On Windows, use the `py` launcher. On macOS/Linux use `python3`.
