@@ -187,9 +187,19 @@ class HomeBase(commands.Cog):
             ),
             color=discord.Color.blue(),
         )
+
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="donate", description="Support HomeBase development")
+    async def donate(self, interaction: discord.Interaction):
+        embed = discord.Embed(
+            title="Support HomeBase",
+            description="Love managing your house with HomeBase? Support its development and keep it running!",
+            color=discord.Color.green(),
+        )
         embed.add_field(
-            name="Support Us",
-            value="Enjoy managing the house with this bot? Support its development on Venmo: https://venmo.com/u/DhruvMulajkar. Scan the QR code below to donate.",
+            name="Venmo",
+            value="https://venmo.com/u/DhruvMulajkar",
             inline=False,
         )
 
